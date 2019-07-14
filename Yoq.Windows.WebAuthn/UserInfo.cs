@@ -1,0 +1,69 @@
+﻿using System;
+using System.Runtime.InteropServices;
+
+namespace Yoq.Windows.WebAuthn
+{
+    // Information about an User Entity
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal class RawUserInfo : IDisposable
+    {
+        internal const int MaxUserIdBytes = 64;
+
+        // Version of this structure, to allow for modifications in the future.
+        // This field is required and should be set to CURRENT_VERSION above.
+        protected int StructVersion = 1;
+
+        // Identifier for the User. This field is required.
+        public int UserIdBytes;
+        public IntPtr UserId;
+
+        // Contains a detailed name for this account, such as "john.p.smith@example.com".
+        public string Name;
+
+        // Optional URL that can be used to retrieve an image containing the user's current avatar,
+        // or a data URI that contains the image data.
+        public string IconUrl;
+
+        // For User: Contains the friendly name associated with the user account by the Relying Party, such as "John P. Smith".
+        public string DisplayName;
+
+
+        public RawUserInfo() { }
+        public RawUserInfo(UserInfo user)
+        {
+            if (user.UserId.Length > MaxUserIdBytes)
+                throw new ArgumentException($"UserId needs to be <= {MaxUserIdBytes} bytes");
+
+            UserId = Marshal.AllocHGlobal(user.UserId.Length);
+            Marshal.Copy(user.UserId, 0, UserId, user.UserId.Length);
+            Name = user.Name;
+            DisplayName = user.DisplayName;
+            IconUrl = user.IconUrl;
+            UserIdBytes = user.UserId.Length;
+        }
+
+        ~RawUserInfo() => FreeMemory();
+        protected void FreeMemory() => Helper.SafeFreeHGlobal(ref UserId);
+        public void Dispose()
+        {
+            FreeMemory();
+            GC.SuppressFinalize(this);
+        }
+    }
+
+    public class UserInfo
+    {
+        // Identifier for the User. This field is required.
+        public byte[] UserId;
+
+        // Contains a detailed name for this account, such as "john.p.smith@example.com".
+        public string Name;
+
+        // Optional URL that can be used to retrieve an image containing the user's current avatar,
+        // or a data URI that contains the image data.
+        public string IconUrl;
+
+        // For User: Contains the friendly name associated with the user account by the Relying Party, such as "John P. Smith".
+        public string DisplayName;
+    }
+}

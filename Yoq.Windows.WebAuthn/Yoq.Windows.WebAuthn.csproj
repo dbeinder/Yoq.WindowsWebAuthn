@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>David Beinder</Authors>
+    <RepositoryUrl>https://github.com/dbeinder/Yoq.Windows.WebAuthn</RepositoryUrl>
+    <PackageLicenseUrl>https://github.com/dbeinder/Yoq.Windows.WebAuthn/blob/master/LICENSE</PackageLicenseUrl>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Copyright>Copyright © David Beinder 2019</Copyright>
+  </PropertyGroup>
+
+</Project>
