@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // Supports either Self or Full Basic Attestation
 

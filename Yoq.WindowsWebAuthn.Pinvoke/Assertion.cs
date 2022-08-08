@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // authenticatorGetAssertion output.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

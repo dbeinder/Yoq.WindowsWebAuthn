@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yoq.WindowsWebAuthn.Pinvoke", "Yoq.WindowsWebAuthn.Pinvoke\Yoq.WindowsWebAuthn.Pinvoke.csproj", "{B9C1D1F7-6557-43CC-84FC-6F5322F78F03}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yoq.WindowsWebAuthn.Demo", "Yoq.WindowsWebAuthn.Demo\Yoq.WindowsWebAuthn.Demo.csproj", "{318DCC6A-923A-4FAB-8CE7-BB2802BE17CF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yoq.WindowsWebAuthn.Managed", "Yoq.WindowsWebAuthn.Managed\Yoq.WindowsWebAuthn.Managed.csproj", "{5F641260-B15D-41FF-A682-6FF0A7773347}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B9C1D1F7-6557-43CC-84FC-6F5322F78F03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9C1D1F7-6557-43CC-84FC-6F5322F78F03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9C1D1F7-6557-43CC-84FC-6F5322F78F03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9C1D1F7-6557-43CC-84FC-6F5322F78F03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{318DCC6A-923A-4FAB-8CE7-BB2802BE17CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{318DCC6A-923A-4FAB-8CE7-BB2802BE17CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{318DCC6A-923A-4FAB-8CE7-BB2802BE17CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{318DCC6A-923A-4FAB-8CE7-BB2802BE17CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F641260-B15D-41FF-A682-6FF0A7773347}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F641260-B15D-41FF-A682-6FF0A7773347}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F641260-B15D-41FF-A682-6FF0A7773347}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F641260-B15D-41FF-A682-6FF0A7773347}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {74C97640-8218-4092-8C4F-3EE2F1E61086}
+	EndGlobalSection
+EndGlobal

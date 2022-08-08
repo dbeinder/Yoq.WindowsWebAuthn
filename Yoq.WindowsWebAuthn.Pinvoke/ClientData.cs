@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // Information about client data.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

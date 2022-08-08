@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+	<Authors>David Beinder</Authors>
+	<RepositoryUrl>https://github.com/dbeinder/Yoq.WindowsWebAuthn</RepositoryUrl>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
+	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	<Copyright>Copyright © David Beinder 2022</Copyright>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fido2.Models" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Yoq.WindowsWebAuthn.Pinvoke\Yoq.WindowsWebAuthn.Pinvoke.csproj" />
+  </ItemGroup>
+
+</Project>

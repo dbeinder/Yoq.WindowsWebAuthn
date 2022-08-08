@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal class RawCredentialAttestation
@@ -78,8 +78,6 @@ namespace Yoq.Windows.WebAuthn
                 ? Marshal.PtrToStructure<RawCommonAttestation>(AttestationDecode)
                 : null;
 
-            var publicCommon = commonAtt?.MarshalToPublic();
-
             return new CredentialAttestation
             {
                 UsedTransport = UsedTransport,
@@ -89,7 +87,7 @@ namespace Yoq.Windows.WebAuthn
                 AuthenticatorData = authData,
                 Attestation = attData,
                 AttestationObject = atoData,
-                CommonAttestation = publicCommon
+                _rawCommonAttestation = commonAtt
             };
         }
     }
@@ -105,7 +103,9 @@ namespace Yoq.Windows.WebAuthn
         //Encoded CBOR attestation information
         public byte[] Attestation;
 
-        public CommonAttestation CommonAttestation;
+        internal RawCommonAttestation _rawCommonAttestation;
+        private CommonAttestation _commonAttestation;
+        public CommonAttestation CommonAttestation => _commonAttestation ?? (_commonAttestation = _rawCommonAttestation?.MarshalToPublic());
 
         // The CBOR encoded Attestation Object to be returned to the RP.
         public byte[] AttestationObject;

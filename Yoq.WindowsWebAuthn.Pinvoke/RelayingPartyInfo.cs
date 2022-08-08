@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // Information about an RP Entity
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     //TODO: unfinished, GetAssertion API does not support extensions yet
 

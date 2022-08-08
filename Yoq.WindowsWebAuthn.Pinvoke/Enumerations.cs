@@ -6,9 +6,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
-    public enum WebAuthnResult : uint
+    public enum WebAuthnHResult : uint
     {
         Ok = 0,
         Canceled = 0x800704C7

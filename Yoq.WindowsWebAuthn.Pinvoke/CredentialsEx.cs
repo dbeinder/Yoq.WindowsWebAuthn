@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // Information about credential with extra information, such as, dwTransports
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -31,7 +31,7 @@ namespace Yoq.Windows.WebAuthn
         public byte[] CredentialId;
 
         // Well-known credential type specifying what this particular credential is.
-        public CredentialType CredentialType = CredentialType.PublicKey;
+        public CredentialType CredentialType;
 
         // Transports. 0 implies no transport restrictions.
         public CtapTransport AllowedTransports;
@@ -41,7 +41,12 @@ namespace Yoq.Windows.WebAuthn
         {
             CredentialId = credId;
             AllowedTransports = allowedAllowedTransports;
+            CredentialType = CredentialType.PublicKey;
         }
+
+        public CredentialEx(byte[] credId, CredentialType type, CtapTransport allowedAllowedTransports)
+            : this(credId, allowedAllowedTransports)
+            => CredentialType = type;
     }
 
     // Information about credential list with extra information

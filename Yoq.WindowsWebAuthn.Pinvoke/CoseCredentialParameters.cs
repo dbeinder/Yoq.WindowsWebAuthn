@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace Yoq.Windows.WebAuthn
+namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // Information about credential parameters.
 
