@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke
@@ -8,7 +9,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     internal class RawAuthenticatorGetAssertionOptions
     {
         // Version of this structure, to allow for modifications in the future.
-        protected int StructVersion = 4;
+        protected int StructVersion = 5;
 
         // Time that the operation is expected to complete within.
         // This is used as guidance, and can be overridden by the platform.
@@ -18,7 +19,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         public RawCredentialsList AllowCredentialsList;
 
         // Optional extensions to parse when performing the operation.
-        public RawWebauthnExtensions Extensions;
+        public RawWebAuthnExtensionsOut Extensions;
 
         // Optional. Platform vs Cross-Platform Authenticators.
         public AuthenticatorAttachment AuthenticatorAttachment;
@@ -29,9 +30,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // Reserved for future Use
         protected int ReservedFlags = 0;
 
-        //
         // The following fields have been added in WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_2
-        //
 
         // Optional identifier for the U2F AppId. Converted to UTF8 before being hashed. Not lower cased.
         public string U2fAppId;
@@ -40,23 +39,32 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // PCWSTR pwszRpId;
         internal IntPtr U2fAppIdUsedBoolPtr; //*bool
 
-        //
-        // The following fields have been added in WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_3
-        //
-
         // Cancellation Id - Optional - See WebAuthNGetCancellationId
         internal IntPtr CancellationId; //*Guid
 
-        //
-        // The following fields have been added in WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_4
-        //
+        // @@ WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_4 (API v1)
 
         // Allow Credential List. If present, "CredentialList" will be ignored.
         internal IntPtr AllowCredentialsExListPtr; //*WEBAUTHN_CREDENTIAL_LIST
 
-        ///-----------------------
-        //should not be marshaled / ignored
+        // @@ WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_5 (API v3)
+
+        internal LargeBlobOperation CredLargeBlobOperation;
+        internal int CredLargeBlobBytes;
+        internal IntPtr CredLargeBlob;
+
+        // @@ WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_6 (API v4)
+
+        // PRF values which will be converted into HMAC-SECRET values according to WebAuthn Spec.
+        //internal IntPtr HmacSecretSaltValues;
+
+        // Optional. BrowserInPrivate Mode. Defaulting to FALSE.
+        //internal bool BrowserInPrivateMode;
+
+        // ------------ ignored ------------
         private readonly RawCredentialExList _allowedCredentialsExList;
+        private readonly RawWebAuthnExtensionOut[] _rawExtensions;
+        private readonly RawWebAuthnExtensionData[] _rawExtensionData;
 
         public RawAuthenticatorGetAssertionOptions() { }
         public RawAuthenticatorGetAssertionOptions(AuthenticatorGetAssertionOptions getOptions)
@@ -78,16 +86,25 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             }
 
             U2fAppId = getOptions.U2fAppId;
-            U2fAppIdUsedBoolPtr = Marshal.AllocHGlobal(Marshal.SizeOf<bool>());
+            U2fAppIdUsedBoolPtr = getOptions.U2fAppId == null ? StaticBoolFalse : StaticBoolTrue;
 
             TimeoutMilliseconds = getOptions.TimeoutMilliseconds;
             AuthenticatorAttachment = getOptions.AuthenticatorAttachment;
             UserVerificationRequirement = getOptions.UserVerificationRequirement;
 
-            Extensions = new RawWebauthnExtensions { Count = 0, Extensions = IntPtr.Zero }; //TODO
-        }
+            var ex = getOptions.Extensions?.Select(e => new { e.Type, Data = e.GetExtensionData() }).ToList();
+            _rawExtensionData = ex?.Select(e => e.Data).ToArray();
+            _rawExtensions = ex?.Select(e => new RawWebAuthnExtensionOut(e.Type, e.Data)).ToArray();
+            Extensions = new RawWebAuthnExtensionsOut(_rawExtensions);
 
-        public bool CheckU2fAppIdUsed() => U2fAppIdUsedBoolPtr != IntPtr.Zero && Marshal.ReadByte(U2fAppIdUsedBoolPtr) > 0;
+            CredLargeBlobOperation = getOptions.LargeBlobOperation;
+            if (getOptions.LargeBlob != null)
+            {
+                CredLargeBlobBytes = getOptions.LargeBlob.Length;
+                CredLargeBlob = Marshal.AllocHGlobal(CredLargeBlobBytes);
+                Marshal.Copy(getOptions.LargeBlob, 0, CredLargeBlob, CredLargeBlobBytes);
+            }
+        }
 
         ~RawAuthenticatorGetAssertionOptions() => FreeMemory();
 
@@ -95,10 +112,12 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         {
             AllowCredentialsList.Dispose();
             _allowedCredentialsExList?.Dispose();
+            if (_rawExtensions != null) foreach (var ext in _rawExtensions) ext.Dispose();
+            if (_rawExtensionData != null) foreach (var ext in _rawExtensionData) ext.Dispose();
 
             Helper.SafeFreeHGlobal(ref AllowCredentialsExListPtr);
-            Helper.SafeFreeHGlobal(ref U2fAppIdUsedBoolPtr);
             Helper.SafeFreeHGlobal(ref CancellationId);
+            Helper.SafeFreeHGlobal(ref CredLargeBlob);
         }
 
         public void Dispose()
@@ -106,14 +125,20 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             FreeMemory();
             GC.SuppressFinalize(this);
         }
+
+        static readonly IntPtr StaticBoolTrue, StaticBoolFalse;
+        static RawAuthenticatorGetAssertionOptions()
+        {
+            StaticBoolTrue = Marshal.AllocHGlobal(Marshal.SizeOf<bool>());
+            Marshal.StructureToPtr(true, StaticBoolTrue, false);
+            StaticBoolFalse = Marshal.AllocHGlobal(Marshal.SizeOf<bool>());
+            Marshal.StructureToPtr(false, StaticBoolTrue, false);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     public class AuthenticatorGetAssertionOptions
     {
-        // Version of this structure, to allow for modifications in the future.
-        protected int StructVersion = 4;
-
         // Time that the operation is expected to complete within.
         // This is used as guidance, and can be overridden by the platform.
         public int TimeoutMilliseconds = 30000;
@@ -125,7 +150,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         public ICollection<CredentialEx> AllowedCredentialsEx;
 
         // Optional extensions to parse when performing the operation.
-        public ICollection<WebAuthnExtension> Extensions;
+        public IReadOnlyCollection<WebAuthnAssertionExtensionInput> Extensions;
 
         // Optional. Platform vs Cross-Platform Authenticators.
         public AuthenticatorAttachment AuthenticatorAttachment;
@@ -138,5 +163,8 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         // Cancellation Id - Optional - See WebAuthNGetCancellationId
         public Guid? CancellationId;
+
+        public LargeBlobOperation LargeBlobOperation;
+        public byte[] LargeBlob;
     }
 }

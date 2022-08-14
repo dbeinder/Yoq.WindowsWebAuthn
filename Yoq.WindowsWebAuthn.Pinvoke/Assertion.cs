@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke
 {
-    // authenticatorGetAssertion output.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal class RawAssertion
     {
@@ -31,6 +31,21 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // UserId
         public IntPtr UserId;
 
+        // @@ WEBAUTHN_ASSERTION_VERSION_2 (API v3)
+
+        public RawWebAuthnExtensionsIn Extensions;
+
+        // Size of pbCredLargeBlob
+        public int CredLargeBlobSize;
+        public IntPtr CredLargeBlob;
+
+        public LargeBlobStatus CredLargeBlobStatus;
+
+        // @@ WEBAUTHN_ASSERTION_VERSION_3 (API v4)
+
+        // IntPtr HmacSecret;
+
+
         public Assertion MarshalToPublic()
         {
             var authData = new byte[AuthenticatorDataBytes];
@@ -44,12 +59,29 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
             var cred = Credential.MarshalToPublic();
 
+            List<WebAuthnExtensionOutput> ext;
+            byte[] largeBlob;
+            if (StructVersion >= 2)
+            {
+                ext = Extensions.MarshalPublic(isCreation: false);
+                largeBlob = new byte[CredLargeBlobSize];
+                if (CredLargeBlobSize > 0) Marshal.Copy(CredLargeBlob, largeBlob, 0, CredLargeBlobSize);
+            }
+            else
+            {
+                ext = new List<WebAuthnExtensionOutput>();
+                largeBlob = new byte[0];
+            }
+
             return new Assertion
             {
                 AuthenticatorData = authData,
                 Signature = sig,
                 UserId = UserIdBytes == 0 ? null : uid,
-                Credential = cred
+                Credential = cred,
+                Extensions = ext,
+                LargeBlobStatus = CredLargeBlobStatus,
+                LargeBlob = largeBlob
             };
         }
     }
@@ -70,5 +102,10 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         // set to TRUE if the above U2fAppId from GetAssertionOptions was used instead of rpId
         public bool U2fAppIdUsed;
+
+        public List<WebAuthnExtensionOutput> Extensions;
+
+        public LargeBlobStatus LargeBlobStatus;
+        public byte[] LargeBlob;
     }
 }

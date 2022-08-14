@@ -42,20 +42,20 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         public int CredentialIdBytes;
         public IntPtr CredentialId;
 
-        //
-        // Following fields have been added in WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_2
-        //
+        public RawWebAuthnExtensionsIn Extensions;
 
-        public RawWebauthnExtensions Extensions;
-
-        //
-        // Following fields have been added in WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_3
-        //
+        // @@ WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_3 (API v1)
 
         // One of the WEBAUTHN_CTAP_TRANSPORT_* bits will be set corresponding to
         // the transport that was used.
         [MarshalAs(UnmanagedType.I4)]
         public CtapTransport UsedTransport;
+
+        // @@ WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_4 (API v3)
+
+        public bool EnterpriseAttestation;
+        public bool LargeBlobSupported;
+        public bool ResidentKey;
 
         public CredentialAttestation MarshalToPublic()
         {
@@ -74,20 +74,25 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             var atoData = new byte[AttestationObjectBytes];
             Marshal.Copy(AttestationObject, atoData, 0, AttestationObjectBytes);
 
-            var commonAtt = AttestationDecodeType == AttestationDecodeType.Common
+            var rawCommonAtt = AttestationDecodeType == AttestationDecodeType.Common
                 ? Marshal.PtrToStructure<RawCommonAttestation>(AttestationDecode)
                 : null;
+
+            var ext = Extensions.MarshalPublic(isCreation: true);
 
             return new CredentialAttestation
             {
                 UsedTransport = UsedTransport,
                 FormatType = type,
-                Extensions = null, //TODO
+                Extensions = ext,
                 CredentialId = credId,
                 AuthenticatorData = authData,
                 Attestation = attData,
                 AttestationObject = atoData,
-                _rawCommonAttestation = commonAtt
+                CommonAttestation = rawCommonAtt?.MarshalToPublic(),
+                EnterpriseAttestation = EnterpriseAttestation,
+                LargeBlobSupported = LargeBlobSupported,
+                ResidentKey = ResidentKey
             };
         }
     }
@@ -103,9 +108,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         //Encoded CBOR attestation information
         public byte[] Attestation;
 
-        internal RawCommonAttestation _rawCommonAttestation;
-        private CommonAttestation _commonAttestation;
-        public CommonAttestation CommonAttestation => _commonAttestation ?? (_commonAttestation = _rawCommonAttestation?.MarshalToPublic());
+        public CommonAttestation CommonAttestation;
 
         // The CBOR encoded Attestation Object to be returned to the RP.
         public byte[] AttestationObject;
@@ -115,10 +118,14 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         public byte[] CredentialId;
 
 
-        public List<WebAuthnExtension> Extensions;
+        public List<WebAuthnExtensionOutput> Extensions;
 
         // One of the WEBAUTHN_CTAP_TRANSPORT_* bits will be set corresponding to
         // the transport that was used.
         public CtapTransport UsedTransport;
+
+        public bool EnterpriseAttestation;
+        public bool LargeBlobSupported;
+        public bool ResidentKey;
     }
 }

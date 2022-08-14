@@ -9,6 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yoq.WindowsWebAuthn.Demo", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yoq.WindowsWebAuthn.Managed", "Yoq.WindowsWebAuthn.Managed\Yoq.WindowsWebAuthn.Managed.csproj", "{5F641260-B15D-41FF-A682-6FF0A7773347}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9437DBF6-85D9-4A44-8958-19B2DE2B727A}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

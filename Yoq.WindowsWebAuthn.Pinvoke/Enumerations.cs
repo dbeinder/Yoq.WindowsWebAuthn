@@ -11,7 +11,8 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     public enum WebAuthnHResult : uint
     {
         Ok = 0,
-        Canceled = 0x800704C7
+        Canceled = 0x800704C7,
+        InvalidParameter = 0x80090027
     }
 
     public enum HashAlgorithm
@@ -80,6 +81,42 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         Direct = 3
     }
 
+    public enum EnterpriseAttestation : int
+    {
+        None = 0,
+        VendorFacilitated = 1,
+        PlatformManaged = 2
+    }
+
+    public enum LargeBlobSupport : int
+    {
+        None = 0,
+        Required = 1,
+        Preferred = 2
+    }
+
+    public enum LargeBlobOperation : int
+    {
+        None = 0,
+        Get = 1,
+        Set = 2,
+        Delete = 3
+    }
+
+    public enum LargeBlobStatus : int
+    {
+        None = 0,
+        Success = 1,
+        NotSupported = 2,
+        InvalidData = 3,
+        InvalidParameter = 4,
+        NotFound = 5,
+        MultipleCredentials = 6,
+        LackOfSpace = 7,
+        PlatformError = 8,
+        AuthenticationError = 9
+    }
+
     public enum AttestationFormatType
     {
         [Description("packed")] Packed,
@@ -92,7 +129,9 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     public enum ExtensionType
     {
         [Description("hmac-secret")] HmacSecret,
-        [Description("credProtect")] CredProtect
+        [Description("credProtect")] CredProtect,
+        [Description("credBlob")] CredBlob,
+        [Description("minPinLength")] MinPinLength
     }
 
     public enum AttestationDecodeType

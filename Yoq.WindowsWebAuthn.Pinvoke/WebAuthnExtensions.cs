@@ -1,67 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke
 {
-    //TODO: unfinished, GetAssertion API does not support extensions yet
-
-    ////+------------------------------------------------------------------------------------------
-    //// Hmac-Secret extension
-    ////-------------------------------------------------------------------------------------------
-
-    //#define WEBAUTHN_EXTENSIONS_IDENTIFIER_HMAC_SECRET                  L"hmac-secret"
-    //// Below type definitions is for WEBAUTHN_EXTENSIONS_IDENTIFIER_HMAC_SECRET
-    //// MakeCredential Input Type:   BOOL.
-    ////      - pvExtension must point to a BOOL with the value TRUE.
-    ////      - cbExtension must contain the sizeof(BOOL).
-    //// MakeCredential Output Type:  BOOL.
-    ////      - pvExtension will point to a BOOL with the value TRUE if credential
-    ////        was successfully created with HMAC_SECRET.
-    ////      - cbExtension will contain the sizeof(BOOL).
-    //// GetAssertion Input Type:     Not Supported
-    //// GetAssertion Output Type:    Not Supported
-
-    ////+------------------------------------------------------------------------------------------
-    ////  credProtect  extension
-    ////-------------------------------------------------------------------------------------------
-
-    public enum UserVerification : int
-    {
-        Any = 0,
-        Optional = 1,
-        OptionalWithCredentialIdList = 2,
-        Required = 3
-    }
-
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public class CredProtectExtensionIn
+    internal abstract class RawWebAuthnExtensionData : IDisposable
     {
-        // One of the above WEBAUTHN_USER_VERIFICATION_* values
-        public UserVerification Type;
-
-        // Set the following to TRUE to require authenticator support for the credProtect extension
-        public bool RequireCredProtect;
+        public virtual void Dispose() { }
     }
 
 
-    //#define WEBAUTHN_EXTENSIONS_IDENTIFIER_CRED_PROTECT                 L"credProtect"
-    //// Below type definitions is for WEBAUTHN_EXTENSIONS_IDENTIFIER_CRED_PROTECT
-    //// MakeCredential Input Type:   WEBAUTHN_CRED_PROTECT_EXTENSION_IN.
-    ////      - pvExtension must point to a WEBAUTHN_CRED_PROTECT_EXTENSION_IN struct
-    ////      - cbExtension will contain the sizeof(WEBAUTHN_CRED_PROTECT_EXTENSION_IN).
-    //// MakeCredential Output Type:  DWORD.
-    ////      - pvExtension will point to a DWORD with one of the above WEBAUTHN_USER_VERIFICATION_* values
-    ////        if credential was successfully created with CRED_PROTECT.
-    ////      - cbExtension will contain the sizeof(DWORD).
-    //// GetAssertion Input Type:     Not Supported
-    //// GetAssertion Output Type:    Not Supported
-
-
-    // Information about Extensions.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    internal class RawWebauthnExtension
+    internal class RawWebAuthnExtension
     {
         public string ExtensionIdentifier;
         public int ExtensionDataBytes;
@@ -69,15 +22,131 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    internal class RawWebauthnExtensions
+    internal class RawWebAuthnExtensionOut : RawWebAuthnExtension
     {
-        public int Count;
-        public IntPtr Extensions;
+        public RawWebAuthnExtensionOut(ExtensionType type, RawWebAuthnExtensionData data)
+        {
+            ExtensionIdentifier = type.ToString();
+            ExtensionDataBytes = Marshal.SizeOf(data);
+            if (ExtensionDataBytes == 0) return;
+            ExtensionData = Marshal.AllocHGlobal(ExtensionDataBytes);
+            Marshal.StructureToPtr(data, ExtensionData, false);
+        }
+        ~RawWebAuthnExtensionOut() => FreeMemory();
+
+        protected void FreeMemory()
+        {
+            if (ExtensionDataBytes == 0) return;
+            Helper.SafeFreeHGlobal(ref ExtensionData);
+        }
+
+        public void Dispose()
+        {
+            FreeMemory();
+            GC.SuppressFinalize(this);
+        }
     }
 
-    public class WebAuthnExtension
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal class RawWebAuthnExtensionIn : RawWebAuthnExtension
     {
-        public ExtensionType ExtensionTypeIdentifier;
-        //TODO: derive class for each extension
+        public WebAuthnExtensionOutput MarshalPublic(bool isCreation)
+        {
+            var type = EnumHelper.FromString<ExtensionType>(ExtensionIdentifier);
+            return WebAuthnExtensionOutput.Get(type, isCreation, this);
+        }
     }
+
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal class RawWebAuthnExtensionsOut
+    {
+        public int Count = 0;
+        public IntPtr Extensions;
+
+        public RawWebAuthnExtensionsOut(IReadOnlyCollection<RawWebAuthnExtensionOut> extensions)
+        {
+            Count = extensions?.Count ?? 0;
+            if (Count == 0) return;
+            var elmSize = Marshal.SizeOf<RawWebAuthnExtension>();
+            var pos = Extensions = Marshal.AllocHGlobal(Count * elmSize);
+            foreach (var ext in extensions)
+            {
+                Marshal.StructureToPtr(ext, pos, false);
+                pos += elmSize;
+            }
+        }
+
+        ~RawWebAuthnExtensionsOut() => FreeMemory();
+
+        protected void FreeMemory()
+        {
+            if (Extensions == IntPtr.Zero) return;
+            Helper.SafeFreeHGlobal(ref Extensions);
+        }
+
+        public void Dispose()
+        {
+            FreeMemory();
+            GC.SuppressFinalize(this);
+        }
+    }
+
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal class RawWebAuthnExtensionsIn
+    {
+        public int Count = 0;
+        public IntPtr Extensions = IntPtr.Zero;
+
+        public List<WebAuthnExtensionOutput> MarshalPublic(bool isCreation)
+        {
+            var extensions = new List<WebAuthnExtensionOutput>();
+            if (Count == 0 || Extensions == IntPtr.Zero) return extensions;
+
+            var pos = Extensions;
+            var elmSize = Marshal.SizeOf<RawWebAuthnExtension>();
+            for (var n = 0; n < Count; n++)
+            {
+                var ext = Marshal.PtrToStructure<RawWebAuthnExtensionIn>(pos);
+                extensions.Add(ext.MarshalPublic(isCreation));
+                pos += elmSize;
+            }
+            return extensions;
+        }
+    }
+
+    public abstract class WebAuthnExtension
+    {
+        public abstract ExtensionType Type { get; }
+        static WebAuthnExtension()
+        {
+            //initialize static ctors of extension types, to fill the dictionary in WebAuthnExtensionOutput
+            var extTypes = typeof(WebAuthnExtension).Assembly.ExportedTypes
+                .Where(t => typeof(WebAuthnExtension).IsAssignableFrom(t));
+            foreach (var extType in extTypes)
+                RuntimeHelpers.RunClassConstructor(extType.TypeHandle);
+        }
+    }
+
+    public abstract class WebAuthnExtensionOutput : WebAuthnExtension
+    {
+        private static readonly Dictionary<ExtensionType, Func<RawWebAuthnExtensionIn, WebAuthnExtensionOutput>> _creationExtFactories = new Dictionary<ExtensionType, Func<RawWebAuthnExtensionIn, WebAuthnExtensionOutput>>();
+        private static readonly Dictionary<ExtensionType, Func<RawWebAuthnExtensionIn, WebAuthnExtensionOutput>> _attestationExtFactories = new Dictionary<ExtensionType, Func<RawWebAuthnExtensionIn, WebAuthnExtensionOutput>>();
+        internal static void Register(ExtensionType type, Func<RawWebAuthnExtensionIn, WebAuthnCreationExtensionOutput> fn) => _creationExtFactories.Add(type, fn);
+        internal static void Register(ExtensionType type, Func<RawWebAuthnExtensionIn, WebAuthnAssertionExtensionOutput> fn) => _attestationExtFactories.Add(type, fn);
+        internal static WebAuthnExtensionOutput Get(ExtensionType type, bool isCreation, RawWebAuthnExtensionIn raw)
+            => (isCreation ? _creationExtFactories : _attestationExtFactories)[type](raw);
+    }
+
+    public abstract class WebAuthnExtensionInput : WebAuthnExtension
+    {
+        internal abstract RawWebAuthnExtensionData GetExtensionData();
+    }
+
+
+    public abstract class WebAuthnCreationExtensionInput : WebAuthnExtensionInput { }
+    public abstract class WebAuthnAssertionExtensionInput : WebAuthnExtensionInput { }
+    public abstract class WebAuthnCreationExtensionOutput : WebAuthnExtensionOutput { }
+    public abstract class WebAuthnAssertionExtensionOutput : WebAuthnExtensionOutput { }
 }

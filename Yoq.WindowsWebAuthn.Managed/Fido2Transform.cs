@@ -1,33 +1,17 @@
-﻿using System.Text.Json;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
 using Yoq.WindowsWebAuthn.Pinvoke;
+using Yoq.WindowsWebAuthn.Pinvoke.Extensions;
 using F2 = Fido2NetLib;
 
 namespace Yoq.WindowsWebAuthn.Managed
 {
     internal static class Fido2Transform
     {
-        public static RelayingPartyInfo ToRelayingPartyInfo(this F2.CredentialCreateOptions opts)
-            => new() { Id = opts.Rp.Id, Name = opts.Rp.Name };
-
-        public static UserInfo ToUserInfo(this F2.CredentialCreateOptions opts)
-            => new() { UserId = opts.User.Id, Name = opts.User.Name, DisplayName = opts.User.DisplayName };
-
-        public static List<CoseCredentialParameter> ToCoseParamsList(this F2.CredentialCreateOptions opts)
-            => opts.PubKeyCredParams.Select(p => new CoseCredentialParameter((CoseAlgorithm)p.Alg)).ToList();
-
-        public static AuthenticatorMakeCredentialOptions ToAuthenticatorMakeCredentialOptions(this F2.CredentialCreateOptions opt, Guid? cancellationId = null) => new()
-        {
-            TimeoutMilliseconds = (int)opt.Timeout,
-            UserVerificationRequirement = opt.AuthenticatorSelection.UserVerification.FromF2(),
-            AuthenticatorAttachment = opt.AuthenticatorSelection.AuthenticatorAttachment.FromF2(),
-            RequireResidentKey = opt.AuthenticatorSelection.RequireResidentKey,
-            AttestationConveyancePreference = opt.Attestation.FromF2(),
-            ExcludeCredentialsEx = opt.ExcludeCredentials.Select(ec => ec.FromF2()).ToList(),
-            CancellationId = cancellationId
-        };
-
+        #region Enums
         public static UserVerificationRequirement FromF2(this F2.Objects.UserVerificationRequirement? uvr)
             => uvr?.FromF2() ?? UserVerificationRequirement.Any;
+
         public static UserVerificationRequirement FromF2(this F2.Objects.UserVerificationRequirement uvr) => uvr switch
         {
             F2.Objects.UserVerificationRequirement.Preferred => UserVerificationRequirement.Preferred,
@@ -71,51 +55,81 @@ namespace Yoq.WindowsWebAuthn.Managed
 
         public static CredentialType FromF2(this F2.Objects.PublicKeyCredentialType? pkct) => pkct switch
         {
-            null => CredentialType.PublicKey, // TODO: verify this
             F2.Objects.PublicKeyCredentialType.PublicKey => CredentialType.PublicKey,
             _ => throw new NotImplementedException(pkct.ToString())
         };
+        #endregion
+
+        public static RelayingPartyInfo ToRelayingPartyInfo(this F2.CredentialCreateOptions opts)
+            => new() { Id = opts.Rp.Id, Name = opts.Rp.Name };
+
+        public static UserInfo ToUserInfo(this F2.CredentialCreateOptions opts)
+            => new() { UserId = opts.User.Id, Name = opts.User.Name, DisplayName = opts.User.DisplayName };
+
+        public static List<CoseCredentialParameter> ToCoseParamsList(this F2.CredentialCreateOptions opts)
+            => opts.PubKeyCredParams.Select(p => new CoseCredentialParameter((CoseAlgorithm)p.Alg)).ToList();
 
         public static CredentialEx FromF2(this F2.Objects.PublicKeyCredentialDescriptor pkcd)
             => new(pkcd.Id, pkcd.Type.FromF2(), pkcd.Transports.FromF2());
 
-
-        //make sure '+' are not escaped by JsonSerializer
-        private static readonly JsonSerializerOptions _jso = new JsonSerializerOptions() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-        public static ClientData ToClientData(this F2.CredentialCreateOptions opt, string origin, HashAlgorithm hashAlg = HashAlgorithm.Sha256)
+        public static IReadOnlyCollection<WebAuthnCreationExtensionInput>? BuildCreationExtensions(this F2.CredentialCreateOptions opt)
         {
-            return new ClientData
-            {
-                ClientDataJSON = JsonSerializer.SerializeToUtf8Bytes(new
-                {
-                    type = "webauthn.create",
-                    challenge = Convert.ToBase64String(opt.Challenge),
-                    origin = origin
-                }, _jso),
-                HashAlgorithm = hashAlg
-            };
+            // https://github.com/passwordless-lib/fido2-net-lib/issues/190
+            // return new[] { new CredProtectExtensionIn() };
+            return null;
         }
 
-        public static ClientData ToClientData(this F2.AssertionOptions opt, string origin, HashAlgorithm hashAlg = HashAlgorithm.Sha256)
+        public static List<WebAuthnAssertionExtensionInput>? BuildAssertionExtensions(this F2.AssertionOptions opt)
         {
-            return new ClientData
-            {
-                ClientDataJSON = JsonSerializer.SerializeToUtf8Bytes(new
-                {
-                    type = "webauthn.get",
-                    challenge = Convert.ToBase64String(opt.Challenge),
-                    origin = origin
-                }, _jso),
-                HashAlgorithm = hashAlg
-            };
+            // https://github.com/passwordless-lib/fido2-net-lib/issues/190
+            return null;
         }
+
+        // Ensure the JsonSerializer doesn't try to escape '+' characters
+        private static readonly JsonSerializerOptions _jso = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+        public static ClientData ToClientData(this F2.CredentialCreateOptions opt, string origin, HashAlgorithm hashAlg = HashAlgorithm.Sha256) => new()
+        {
+            ClientDataJSON = JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                type = "webauthn.create",
+                challenge = Convert.ToBase64String(opt.Challenge),
+                origin = origin
+            }, _jso),
+            HashAlgorithm = hashAlg
+        };
+
+        public static ClientData ToClientData(this F2.AssertionOptions opt, string origin, HashAlgorithm hashAlg = HashAlgorithm.Sha256) => new()
+        {
+            ClientDataJSON = JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                type = "webauthn.get",
+                challenge = Convert.ToBase64String(opt.Challenge),
+                origin = origin
+            }, _jso),
+            HashAlgorithm = hashAlg
+        };
+
+        public static AuthenticatorMakeCredentialOptions ToAuthenticatorMakeCredentialOptions(this F2.CredentialCreateOptions opt, Guid? cancellationId = null) => new()
+        {
+            TimeoutMilliseconds = (int)opt.Timeout,
+            UserVerificationRequirement = opt.AuthenticatorSelection.UserVerification.FromF2(),
+            AuthenticatorAttachment = opt.AuthenticatorSelection.AuthenticatorAttachment.FromF2(),
+            RequireResidentKey = opt.AuthenticatorSelection.RequireResidentKey,
+            AttestationConveyancePreference = opt.Attestation.FromF2(),
+            ExcludeCredentialsEx = opt.ExcludeCredentials.Select(ec => ec.FromF2()).ToList(),
+            CancellationId = cancellationId,
+            Extensions = opt.BuildCreationExtensions()
+        };
 
         public static AuthenticatorGetAssertionOptions ToAssertionOptions(this F2.AssertionOptions opt, Guid? cancellationId = null) => new()
         {
             CancellationId = cancellationId,
             TimeoutMilliseconds = (int)opt.Timeout,
             UserVerificationRequirement = opt.UserVerification.FromF2(),
-            AllowedCredentialsEx = opt.AllowCredentials.Select(ec => ec.FromF2()).ToList()
+            AllowedCredentialsEx = opt.AllowCredentials.Select(ec => ec.FromF2()).ToList(),
+            U2fAppId = opt.Extensions?.AppID,
+            Extensions = opt.BuildAssertionExtensions()
         };
     }
 }

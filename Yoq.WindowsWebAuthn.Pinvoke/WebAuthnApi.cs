@@ -1,16 +1,48 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke
 {
+    /* API changes since V1:
+            V2:
+                added credProtect extension
+
+            V3:
+                added minPinLength extension
+                added credBlob extension
+                RawAuthenticatorMakeCredentialOptions   StructVersion 4
+                AuthenticatorGetAssertionOptions        StructVersion 5
+                CredentialAttestation                   StructVersion 4
+                Assertion                               StructVersion 2
+
+            V4: [WIP, DLL not seen yet]
+                RawAuthenticatorMakeCredentialOptions   StructVersion 5
+                AuthenticatorGetAssertionOptions        StructVersion 6
+                Assertion                               StructVersion 3
+                new APIs:
+                    WebAuthNGetPlatformCredentialList
+                    WebAuthNFreePlatformCredentialList
+                    WebAuthNDeletePlatformCredential
+     */
     public static class WebAuthnApi
     {
+        public static bool CheckApiAvailable()
+        {
+            var getApiVersionMethod = typeof(WebAuthnApi).GetMethod(nameof(RawGetApiVersionNumber), BindingFlags.Public | BindingFlags.Static);
+            try { Marshal.Prelink(getApiVersionMethod); }
+            catch { return false; }
+            return true;
+        }
+
         [DllImport("webauthn.dll", EntryPoint = "WebAuthNGetApiVersionNumber", CharSet = CharSet.Unicode)]
-        public static extern int GetApiVersionNumber();
+        public static extern int RawGetApiVersionNumber();
+
+
+        private static int? _apiVersion;
+        public static int ApiVersion => _apiVersion ?? (_apiVersion = RawGetApiVersionNumber()).Value;
+
 
         [DllImport("webauthn.dll", EntryPoint = "WebAuthNIsUserVerifyingPlatformAuthenticatorAvailable", CharSet = CharSet.Unicode)]
         public static extern WebAuthnHResult IsUserVerifyingPlatformAuthenticatorAvailable(
@@ -60,7 +92,6 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             AuthenticatorMakeCredentialOptions makeOptions,
             out CredentialAttestation credential)
         {
-            //TODO: extensions
             credential = null;
 
             var rawUser = new RawUserInfo(user);
@@ -95,7 +126,6 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             AuthenticatorGetAssertionOptions getOptions,
             out Assertion assertion)
         {
-            //TODO: extensions
             assertion = null;
 
             var rawClientData = new RawClientData(clientData);
@@ -109,10 +139,6 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             {
                 var rawAssertion = Marshal.PtrToStructure<RawAssertion>(rawAsnPtr);
                 assertion = rawAssertion?.MarshalToPublic();
-
-                if (assertion != null && rawGetOptions != null)
-                    assertion.U2fAppIdUsed = rawGetOptions.CheckU2fAppIdUsed();
-
                 FreeRawAssertion(rawAsnPtr);
             }
 

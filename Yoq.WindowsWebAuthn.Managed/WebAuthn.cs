@@ -17,8 +17,9 @@ namespace Yoq.WindowsWebAuthn.Managed
 
     public static class WebAuthn
     {
-        private static int? _apiVersion;
-        public static int ApiVersion => _apiVersion ?? (_apiVersion = WebAuthnApi.GetApiVersionNumber()).Value;
+        private static bool? _available;
+        public static bool ApiAvailable => _available ?? (_available = WebAuthnApi.CheckApiAvailable()).Value;
+        public static int ApiVersion => WebAuthnApi.ApiVersion;
 
         private static bool? _userVerifyingPlatformAuthenticatorAvailable;
         public static bool UserVerifyingPlatformAuthenticatorAvailable
@@ -98,7 +99,7 @@ namespace Yoq.WindowsWebAuthn.Managed
             response = null;
             var clientData = opts.ToClientData(origin);
             var res = WebAuthnApi.AuthenticatorGetAssertion(hwnd, opts.RpId, clientData, opts.ToAssertionOptions(cancelGuid), out var assertion);
-            
+
             cancelReg?.Dispose();
             if (cancelReg?.Token.IsCancellationRequested ?? false) return WebAuthnResult.Cancelled;
             if (CheckFailure(res, out var result)) return result;
@@ -120,5 +121,10 @@ namespace Yoq.WindowsWebAuthn.Managed
             return WebAuthnResult.Success;
         }
 
+        public static Task<(WebAuthnResult, F2.AuthenticatorAttestationRawResponse)> MakeCredentialAsync(IntPtr hwnd, F2.CredentialCreateOptions opts, string origin, CancellationToken? ct = null)
+            => Task.Run(() => { var res = MakeCredential(hwnd, opts, origin, out var resp, ct); return (res, resp); });
+
+        public static Task<(WebAuthnResult, F2.AuthenticatorAssertionRawResponse)> GetAssertionAsync(IntPtr hwnd, F2.AssertionOptions opts, string origin, CancellationToken? ct = null)
+            => Task.Run(() => { var res = GetAssertion(hwnd, opts, origin, out var resp, ct); return (res, resp); });
     }
 }
