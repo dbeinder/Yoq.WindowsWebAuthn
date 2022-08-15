@@ -2,10 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-	<Authors>David Beinder</Authors>
+    <PackageId>Yoq.WindowsWebAuthn.Managed</PackageId>
+    <Authors>David Beinder</Authors>
+    <Description>Library to directly send/receive Fido2.Models to a WebAuthn/Fido2 authenticator on Windows 10+ (webauthn.dll)</Description>
+    <Version>1.0.3</Version>
 	<RepositoryUrl>https://github.com/dbeinder/Yoq.WindowsWebAuthn</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 	<Copyright>Copyright © David Beinder 2022</Copyright>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -19,4 +27,10 @@
     <ProjectReference Include="..\Yoq.WindowsWebAuthn.Pinvoke\Yoq.WindowsWebAuthn.Pinvoke.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>

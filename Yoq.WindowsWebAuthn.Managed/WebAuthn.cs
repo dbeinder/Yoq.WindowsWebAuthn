@@ -3,16 +3,19 @@ using F2 = Fido2NetLib;
 
 namespace Yoq.WindowsWebAuthn.Managed
 {
-    public enum WebAuthnResult
+    public enum WebAuthnResult : uint
     {
-        Success,
+        Success = 0,
         UserCancelled,
-        Cancelled,
-        InvalidStateError,
-        ConstraintError,
-        NotSupportedError,
-        NotAllowedError,
-        UnknownError
+        CancellationRequested,
+        CredentialExists,
+        TimeoutExpired,
+        PlatformAuthUnavailable,
+        ConstraintNotSatisfied,
+        NotSupported,
+        TokenStorageFull,
+        NotAllowed
+        // enum contains original HRESULT if an unknown error is returned
     }
 
     public static class WebAuthn
@@ -35,40 +38,51 @@ namespace Yoq.WindowsWebAuthn.Managed
             }
         }
 
-        private static bool CheckFailure(WebAuthnHResult hresult, out WebAuthnResult result)
+        private static bool CheckFailure(WebAuthnHResult hresult, CancellationToken? ct, out WebAuthnResult result)
         {
             result = WebAuthnResult.Success;
             if (hresult == WebAuthnHResult.Ok) return false;
-            if (hresult == WebAuthnHResult.Canceled)
-                result = WebAuthnResult.UserCancelled;
-            else
+            result = hresult switch
             {
-                var errorText = WebAuthnApi.GetErrorName(hresult);
-                result = Enum.TryParse<WebAuthnResult>(errorText, out var en) ? en : WebAuthnResult.UnknownError;
-            }
+                WebAuthnHResult.NteExists => WebAuthnResult.CredentialExists,
+                WebAuthnHResult.Timeout => WebAuthnResult.TimeoutExpired,
+                WebAuthnHResult.Canceled when ct?.IsCancellationRequested ?? false => WebAuthnResult.CancellationRequested,
+                WebAuthnHResult.Canceled => WebAuthnResult.UserCancelled,
+                WebAuthnHResult.NteUserCanceled => WebAuthnResult.UserCancelled,
+                WebAuthnHResult.NteBadKeyset => WebAuthnResult.PlatformAuthUnavailable,
+                WebAuthnHResult.NteInvalidParameter => WebAuthnResult.NotSupported,
+                WebAuthnHResult.NteTokenKeysetStorageFull => WebAuthnResult.TokenStorageFull,
+                WebAuthnHResult.NotSupported => WebAuthnResult.ConstraintNotSatisfied,
+                WebAuthnHResult.NteNotSupported => WebAuthnResult.ConstraintNotSatisfied,
+                WebAuthnHResult.NteDeviceNotFound => WebAuthnResult.NotAllowed,
+                WebAuthnHResult.NteNotFound => WebAuthnResult.NotAllowed,
+                _ => (WebAuthnResult)hresult
+            };
             return true;
         }
 
         public static WebAuthnResult MakeCredential(IntPtr hwnd, F2.CredentialCreateOptions opts, string origin, out F2.AuthenticatorAttestationRawResponse response, CancellationToken? ct = null)
         {
+#nullable disable
+            response = null;
+#nullable restore
+
             Guid? cancelGuid = null;
             CancellationTokenRegistration? cancelReg = null;
             if (ct.HasValue)
             {
-                WebAuthnApi.GetCancellationId(out var cg);
+                if (WebAuthnApi.GetCancellationId(out var cg) != WebAuthnHResult.Ok) return WebAuthnResult.NotSupported;
                 cancelGuid = cg;
                 cancelReg = ct.Value.Register(() => WebAuthnApi.CancelCurrentOperation(cg));
             }
 
-            response = null;
             var clientData = opts.ToClientData(origin);
             var res = WebAuthnApi.AuthenticatorMakeCredential(hwnd, opts.ToRelayingPartyInfo(), opts.ToUserInfo(),
                                                                     opts.ToCoseParamsList(), clientData,
                                                                     opts.ToAuthenticatorMakeCredentialOptions(cancelGuid),
                                                                     out var credential);
             cancelReg?.Dispose();
-            if (cancelReg?.Token.IsCancellationRequested ?? false) return WebAuthnResult.Cancelled;
-            if (CheckFailure(res, out var result)) return result;
+            if (CheckFailure(res, ct, out var result)) return result;
 
             response = new F2.AuthenticatorAttestationRawResponse
             {
@@ -87,22 +101,23 @@ namespace Yoq.WindowsWebAuthn.Managed
 
         public static WebAuthnResult GetAssertion(IntPtr hwnd, F2.AssertionOptions opts, string origin, out F2.AuthenticatorAssertionRawResponse response, CancellationToken? ct = null)
         {
+#nullable disable
+            response = null;
+#nullable restore
+
             Guid? cancelGuid = null;
             CancellationTokenRegistration? cancelReg = null;
             if (ct.HasValue)
             {
-                WebAuthnApi.GetCancellationId(out var cg);
+                if (WebAuthnApi.GetCancellationId(out var cg) != WebAuthnHResult.Ok) return WebAuthnResult.NotSupported;
                 cancelGuid = cg;
                 cancelReg = ct.Value.Register(() => WebAuthnApi.CancelCurrentOperation(cg));
             }
 
-            response = null;
             var clientData = opts.ToClientData(origin);
             var res = WebAuthnApi.AuthenticatorGetAssertion(hwnd, opts.RpId, clientData, opts.ToAssertionOptions(cancelGuid), out var assertion);
-
             cancelReg?.Dispose();
-            if (cancelReg?.Token.IsCancellationRequested ?? false) return WebAuthnResult.Cancelled;
-            if (CheckFailure(res, out var result)) return result;
+            if (CheckFailure(res, ct, out var result)) return result;
 
             response = new F2.AuthenticatorAssertionRawResponse()
             {

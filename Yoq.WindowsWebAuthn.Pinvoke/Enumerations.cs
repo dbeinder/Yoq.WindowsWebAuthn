@@ -11,8 +11,17 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     public enum WebAuthnHResult : uint
     {
         Ok = 0,
-        Canceled = 0x800704C7,
-        InvalidParameter = 0x80090027
+        NotSupported = 0x80070032,              //Win32: The request is not supported
+        Canceled = 0x800704C7,                  //Win32: The operation was canceled by the user
+        Timeout = 0x800705B4,                   //Win32: This operation returned because the timeout period expired
+        NteExists = 0x8009000F,                 // Object already exists
+        NteNotFound = 0x80090011,               // Object was not found
+        NteBadKeyset = 0x80090016,              // Keyset does not exist (Windows Hello not active)
+        NteTokenKeysetStorageFull = 0x80090023, // The security token does not have storage space available for an additional container
+        NteInvalidParameter = 0x80090027,       // The parameter is incorrect
+        NteNotSupported = 0x80090029,           // The requested operation is not supported
+        NteDeviceNotFound = 0x80090035,         // The device that is required by this cryptographic provider is not found on this platform
+        NteUserCanceled = 0x80090036            // The action was cancelled by the user
     }
 
     public enum HashAlgorithm
@@ -161,16 +170,16 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         public static string GetString<T>(this T value)
         {
-            var descCache = Cache.GetOrAdd(typeof(T), t => BuildDict<T>());
-            if (!descCache.Forward.TryGetValue(Convert.ToInt32(value), out var desc))
+            var (forward, _) = Cache.GetOrAdd(typeof(T), t => BuildDict<T>());
+            if (!forward.TryGetValue(Convert.ToInt32(value), out var desc))
                 throw new ArgumentException($"No Description found for value {value} on type {typeof(T).Name}");
             return desc;
         }
 
         public static T FromString<T>(string str)
         {
-            var descCache = Cache.GetOrAdd(typeof(T), t => BuildDict<T>());
-            if (!descCache.Reverse.TryGetValue(str, out var value))
+            var (_, reverse) = Cache.GetOrAdd(typeof(T), t => BuildDict<T>());
+            if (!reverse.TryGetValue(str, out var value))
                 throw new ArgumentException($"No Value found for string {str} on type {typeof(T).Name}");
             return (T)(object)value;
         }
