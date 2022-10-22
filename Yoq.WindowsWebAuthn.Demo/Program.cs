@@ -52,8 +52,8 @@ namespace Yoq.WindowsWebAuthn.Demo
             Console.WriteLine($"webauthn.dll API version: {WebAuthn.ApiVersion}");
             Console.WriteLine($"User Verifying Platform Authenticator available: {WebAuthn.UserVerifyingPlatformAuthenticatorAvailable}");
 
-            var windowHandle = WinApiHelper.GetConsoleWindow();
-
+            var windowHandle = WinApiHelper.GetForegroundWindow();
+            
             var myTestOrigin = "local://demo-app";
             var config = new Fido2Configuration
             {
