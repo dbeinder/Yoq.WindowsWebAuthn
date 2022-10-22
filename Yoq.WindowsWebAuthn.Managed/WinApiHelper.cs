@@ -6,5 +6,7 @@ namespace Yoq.WindowsWebAuthn.Managed
     {
         [DllImport("kernel32.dll")]
         public static extern IntPtr GetConsoleWindow();
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetForegroundWindow();
     }
 }
