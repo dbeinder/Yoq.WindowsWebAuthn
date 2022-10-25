@@ -52,6 +52,13 @@ namespace Yoq.WindowsWebAuthn.Demo
             Console.WriteLine($"webauthn.dll API version: {WebAuthn.ApiVersion}");
             Console.WriteLine($"User Verifying Platform Authenticator available: {WebAuthn.UserVerifyingPlatformAuthenticatorAvailable}");
 
+            // This handle selects the window, that the security prompt will be centered in.
+            // After the prompt finishes, focus will be returned to the window choosen here.
+            // (!) This is only an example, please note that GetForegroundWindow() may return:
+            //   - the window handle of a different process if this process is not in the foreground
+            //   - or even NULL if there is no active window at all
+            // The WebAuthn API does not allow NULL, and returning to the wrong window is annoying,
+            // so take care with this parameter in a real world application.
             var windowHandle = WinApiHelper.GetForegroundWindow();
             
             var myTestOrigin = "local://demo-app";
