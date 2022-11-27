@@ -40,10 +40,9 @@ namespace Yoq.WindowsWebAuthn.Managed
 
         private static bool CheckFailure(WebAuthnHResult hresult, CancellationToken? ct, out WebAuthnResult result)
         {
-            result = WebAuthnResult.Success;
-            if (hresult == WebAuthnHResult.Ok) return false;
             result = hresult switch
             {
+                WebAuthnHResult.Ok => WebAuthnResult.Success,
                 WebAuthnHResult.NteExists => WebAuthnResult.CredentialExists,
                 WebAuthnHResult.Timeout => WebAuthnResult.TimeoutExpired,
                 WebAuthnHResult.Canceled when ct?.IsCancellationRequested ?? false => WebAuthnResult.CancellationRequested,
@@ -58,7 +57,7 @@ namespace Yoq.WindowsWebAuthn.Managed
                 WebAuthnHResult.NteNotFound => WebAuthnResult.NotAllowed,
                 _ => (WebAuthnResult)hresult
             };
-            return true;
+            return result != WebAuthnResult.Success;
         }
 
         public static WebAuthnResult MakeCredential(IntPtr hwnd, F2.CredentialCreateOptions opts, string origin, out F2.AuthenticatorAttestationRawResponse response, CancellationToken? ct = null)

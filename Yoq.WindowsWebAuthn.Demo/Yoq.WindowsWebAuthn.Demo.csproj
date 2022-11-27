@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fido2" Version="3.0.0" />
-    <PackageReference Include="Fido2.Models" Version="3.0.0" />
+    <PackageReference Include="Fido2" Version="3.0.1" />
+    <PackageReference Include="Fido2.Models" Version="3.0.1" />
   </ItemGroup>
 
   <ItemGroup>

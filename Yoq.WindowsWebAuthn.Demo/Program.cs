@@ -60,7 +60,7 @@ namespace Yoq.WindowsWebAuthn.Demo
             // The WebAuthn API does not allow NULL, and returning to the wrong window is annoying,
             // so take care with this parameter in a real world application.
             var windowHandle = WinApiHelper.GetForegroundWindow();
-            
+
             var myTestOrigin = "local://demo-app";
             var config = new Fido2Configuration
             {
@@ -78,8 +78,8 @@ namespace Yoq.WindowsWebAuthn.Demo
             var attestationReq = AttestationConveyancePreference.None;
             var transportIdx = 0;
             var transportList = new AuthenticatorTransport[]?[] { null,
-                new[] { AuthenticatorTransport.Usb },new[] { AuthenticatorTransport.Nfc },
-                new[] { AuthenticatorTransport.Ble }, new[]{AuthenticatorTransport.Internal } };
+                new[] { AuthenticatorTransport.Usb }, new[] { AuthenticatorTransport.Nfc },
+                new[] { AuthenticatorTransport.Ble }, new[] { AuthenticatorTransport.Internal } };
             AuthenticatorTransport[]? transport = null;
             List<Credential> testCreds = File.Exists(CredentialsFile) ? File.ReadAllLines(CredentialsFile).Select(s => new Credential(s)).ToList() : new();
             void UpdateCredFile() => File.WriteAllLines(CredentialsFile, testCreds.Select(c => c.ToLine()));
@@ -165,8 +165,13 @@ namespace Yoq.WindowsWebAuthn.Demo
                         if (makeRes.Result == null) continue;
                         testCreds.Add(new Credential(makeRes.Result, needResidentKey));
                         UpdateCredFile();
-                        //TODO: print attestation chain, needs Fido2.Models v3.1.0
-                        //foreach(var cert in makeRes.Result.AttestationCertificateChain) Console.WriteLine($"Attestation CN: {cert?.Subject}");
+                        foreach (var cert in makeRes.Result.AttestationCertificateChain)
+                        {
+                            Console.WriteLine($"Attestation Subject: {cert?.Subject}");
+                            Console.WriteLine($"            Issuer:  {cert?.Issuer}");
+                            Console.WriteLine($"            Serial:  {cert?.SerialNumber}");
+                            Console.WriteLine($"            Valid:   {cert?.NotBefore:yyyy-MM-dd} - {cert?.NotAfter:yyyy-MM-dd}");
+                        }
                         continue;
 
                     case 2:
@@ -183,10 +188,10 @@ namespace Yoq.WindowsWebAuthn.Demo
                         var cred = testCreds.FirstOrDefault(c => c.CredentialId.SequenceEqual(assertResponse.Id));
                         if (cred == null)
                         {
-                            Console.WriteLine($"Can't verify unknown credential, has {CredentialsFile} been cleared?");
+                            Console.WriteLine($"Assertion received, but Credential was not found in {CredentialsFile}, can't verify!");
                             continue;
                         }
-                        
+
                         var getResult = fido2.MakeAssertionAsync(assertResponse, assertRequest, cred.PublicKey, cred.Counter, (p, _) => Task.FromResult(true)).Result;
                         Console.WriteLine($"MakeAssertion Result: {getResult.Status} {getResult.ErrorMessage} Counter: {getResult.Counter}");
                         Console.WriteLine($"Used Credential: {cred.Name}");

@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fido2.Models" Version="3.0.0" />
+    <PackageReference Include="Fido2.Models" Version="3.0.1" />
   </ItemGroup>
 
   <ItemGroup>
