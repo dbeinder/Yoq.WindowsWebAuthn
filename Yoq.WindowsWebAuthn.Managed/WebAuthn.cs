@@ -135,6 +135,20 @@ namespace Yoq.WindowsWebAuthn.Managed
             return WebAuthnResult.Success;
         }
 
+        public static WebAuthnResult GetPlatformCredentials(out List<CredentialDetails> platformCredentials, string rpId = null, bool isPrivateWindow = false)
+        {
+            var res = WebAuthnApi.GetPlatformCredentialList(out platformCredentials, rpId, isPrivateWindow);
+            CheckFailure(res, null, out var result);
+            return result;
+        }
+
+        public static WebAuthnResult DeletePlatformCredential(CredentialDetails cred)
+        {
+            var res = WebAuthnApi.DeletePlatformCredential(cred.CredentialId);
+            CheckFailure(res, null, out var result);
+            return result;
+        }
+
         public static Task<(WebAuthnResult, F2.AuthenticatorAttestationRawResponse)> MakeCredentialAsync(IntPtr hwnd, F2.CredentialCreateOptions opts, string origin, CancellationToken? ct = null)
             => Task.Run(() => { var res = MakeCredential(hwnd, opts, origin, out var resp, ct); return (res, resp); });
 

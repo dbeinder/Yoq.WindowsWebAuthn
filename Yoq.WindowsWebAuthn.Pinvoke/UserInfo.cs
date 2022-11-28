@@ -5,7 +5,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 {
     // Information about an User Entity
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    internal class RawUserInfo : IDisposable
+    internal class RawUserInfo
     {
         internal const int MaxUserIdBytes = 64;
 
@@ -27,9 +27,26 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // For User: Contains the friendly name associated with the user account by the Relying Party, such as "John P. Smith".
         public string DisplayName;
 
+        internal UserInfo MarshalToPublic()
+        {
+            var info = new UserInfo
+            {
+                Name = Name,
+                IconUrl = IconUrl,
+                DisplayName = DisplayName,
+                UserId = new byte[UserIdBytes]
+            };
+            if (UserIdBytes != 0 && UserId != IntPtr.Zero)
+                Marshal.Copy(UserId, info.UserId, 0, UserIdBytes);
+            return info;
+        }
+    }
 
-        public RawUserInfo() { }
-        public RawUserInfo(UserInfo user)
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal class RawUserInfoOut : RawUserInfo, IDisposable
+    {
+        public RawUserInfoOut() { }
+        public RawUserInfoOut(UserInfo user)
         {
             if (user.UserId.Length > MaxUserIdBytes)
                 throw new ArgumentException($"UserId needs to be <= {MaxUserIdBytes} bytes");
@@ -42,7 +59,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             UserIdBytes = user.UserId.Length;
         }
 
-        ~RawUserInfo() => FreeMemory();
+        ~RawUserInfoOut() => FreeMemory();
         protected void FreeMemory() => Helper.SafeFreeHGlobal(ref UserId);
         public void Dispose()
         {

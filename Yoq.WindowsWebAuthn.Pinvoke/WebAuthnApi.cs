@@ -84,6 +84,17 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             [In, Optional] RawAuthenticatorGetAssertionOptions rawGetAssertionOptions,
             [Out] out IntPtr rawAssertionPtr);
 
+        [DllImport("webauthn.dll", EntryPoint = "WebAuthNGetPlatformCredentialList", CharSet = CharSet.Unicode)]
+        private static extern WebAuthnHResult GetRawPlatformCredentialList(
+            [In] RawGetCredentialsOptions getCredOptions,
+            [Out] out IntPtr credDetailsListPtr);
+
+        [DllImport("webauthn.dll", EntryPoint = "WebAuthNFreePlatformCredentialList", CharSet = CharSet.Unicode)]
+        private static extern WebAuthnHResult FreeRawPlatformCredentialList([In] IntPtr credDetailsListPtr);
+
+        [DllImport("webauthn.dll", EntryPoint = "WebAuthNDeletePlatformCredential", CharSet = CharSet.Unicode)]
+        private static extern WebAuthnHResult RawDeletePlatformCredential([In] int credIdLen, [In] IntPtr credId);
+
         public static WebAuthnHResult AuthenticatorMakeCredential(IntPtr window,
             RelayingPartyInfo rp,
             UserInfo user,
@@ -94,7 +105,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         {
             credential = null;
 
-            var rawUser = new RawUserInfo(user);
+            var rawUser = new RawUserInfoOut(user);
             var rawCredList = new RawCoseCredentialParameters(coseParams);
             var rawClientData = new RawClientData(clientData);
             var rawMakeCredOptions = makeOptions == null
@@ -145,6 +156,40 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             rawClientData.Dispose();
             rawGetOptions?.Dispose();
 
+            return res;
+        }
+
+        public static WebAuthnHResult GetPlatformCredentialList(
+            out List<CredentialDetails> credentials,
+            string rpId = null,
+            bool isPrivateWindow = false)
+        {
+            var opts = new RawGetCredentialsOptions { BrowserInPrivateMode = isPrivateWindow, RelayingPartyId = rpId };
+            var res = GetRawPlatformCredentialList(opts, out var credListPtr);
+
+            if (res == WebAuthnHResult.NteNotFound)
+            {
+                credentials = new List<CredentialDetails>();
+                return WebAuthnHResult.Ok;
+            }
+
+            credentials = null;
+            if (credListPtr != IntPtr.Zero)
+            {
+                var rawList = Marshal.PtrToStructure<RawCredentialDetailsList>(credListPtr);
+                credentials = rawList.MarshalToPublic();
+                FreeRawPlatformCredentialList(credListPtr);
+            }
+
+            return res;
+        }
+
+        public static WebAuthnHResult DeletePlatformCredential(byte[] credentialId)
+        {
+            var credIdRaw = Marshal.AllocHGlobal(credentialId.Length);
+            Marshal.Copy(credentialId, 0, credIdRaw, credentialId.Length);
+            var res = RawDeletePlatformCredential(credentialId.Length, credIdRaw);
+            Marshal.FreeHGlobal(credIdRaw);
             return res;
         }
     }

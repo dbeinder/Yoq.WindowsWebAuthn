@@ -98,6 +98,7 @@ namespace Yoq.WindowsWebAuthn.Demo
                 Console.WriteLine($"  (8) Toggle Authenticator Attachment [{attachment}]        ");
                 Console.WriteLine($"(2) Request Assertion");
                 Console.WriteLine($"(9) Forget all credentials [{testCreds.Count} stored]   ");
+                Console.WriteLine($"(10) Manage platform credentials");
                 Console.WriteLine($"(0) Exit");
                 Console.Write(">            ");
 
@@ -136,6 +137,19 @@ namespace Yoq.WindowsWebAuthn.Demo
                     case 3: uvReq = (UserVerificationRequirement)(((int)uvReq + 1) % 3); JumpBack(); continue;
                     case 6: needResidentKey = !needResidentKey; JumpBack(); continue;
                     case 9: File.WriteAllText(CredentialsFile, ""); testCreds.Clear(); JumpBack(); continue;
+                    case 10:
+                        Console.WriteLine("\n= Platform credentials =");
+
+                        var res = WebAuthn.GetPlatformCredentials(out var platformCredentials);
+                        Console.WriteLine($"GetPlatformCredentials: {res}, found {platformCredentials?.Count} credentials");
+                        if (res != WebAuthnResult.Success) break;
+                        for (var n = 0; n < platformCredentials!.Count; n++)
+                            Console.WriteLine($"  [{n}] {platformCredentials[n].User.Name}");
+                        if (platformCredentials.Count == 0) break;
+                        Console.Write("Delete platform credential? [none]>");
+                        if (int.TryParse(Console.ReadLine()?.Trim(), out var del) && del >= 0 && del < platformCredentials.Count)
+                            Console.WriteLine($"DeletePlatformCredential: {WebAuthn.DeletePlatformCredential(platformCredentials[del])}");
+                        break;
                     case 1:
                         Console.WriteLine("\n= Creating new credential =");
                         var username = "testuser" + userCounter++;
@@ -156,7 +170,7 @@ namespace Yoq.WindowsWebAuthn.Demo
 
                         var cancelSource = doTimeout ? new CancellationTokenSource(TimeSpan.FromSeconds(10)) : null;
                         Console.WriteLine($"Calling Windows WebAuthn API...");
-                        var res = WebAuthn.MakeCredential(windowHandle, makeRequest, myTestOrigin, out var response, cancelSource?.Token);
+                        res = WebAuthn.MakeCredential(windowHandle, makeRequest, myTestOrigin, out var response, cancelSource?.Token);
                         Console.WriteLine($"Authenticator Response: {res}");
                         if (res != WebAuthnResult.Success) continue;
 
@@ -165,12 +179,13 @@ namespace Yoq.WindowsWebAuthn.Demo
                         if (makeRes.Result == null) continue;
                         testCreds.Add(new Credential(makeRes.Result, needResidentKey));
                         UpdateCredFile();
-                        foreach (var cert in makeRes.Result.AttestationCertificateChain)
+                        for (var cn = 0; cn < makeRes.Result.AttestationCertificateChain.Length; cn++)
                         {
-                            Console.WriteLine($"Attestation Subject: {cert?.Subject}");
-                            Console.WriteLine($"            Issuer:  {cert?.Issuer}");
-                            Console.WriteLine($"            Serial:  {cert?.SerialNumber}");
-                            Console.WriteLine($"            Valid:   {cert?.NotBefore:yyyy-MM-dd} - {cert?.NotAfter:yyyy-MM-dd}");
+                            var cert = makeRes.Result.AttestationCertificateChain[cn];
+                            Console.WriteLine($"Attestation[{cn}] Subject: {cert?.Subject}");
+                            Console.WriteLine($"               Issuer:  {cert?.Issuer}");
+                            Console.WriteLine($"               Serial:  {cert?.SerialNumber}");
+                            Console.WriteLine($"               Valid:   {cert?.NotBefore:yyyy-MM-dd} - {cert?.NotAfter:yyyy-MM-dd}");
                         }
                         continue;
 
