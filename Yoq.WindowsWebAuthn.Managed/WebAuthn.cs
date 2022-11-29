@@ -53,6 +53,7 @@ namespace Yoq.WindowsWebAuthn.Managed
                 WebAuthnHResult.NteTokenKeysetStorageFull => WebAuthnResult.TokenStorageFull,
                 WebAuthnHResult.NotSupported => WebAuthnResult.ConstraintNotSatisfied,
                 WebAuthnHResult.NteNotSupported => WebAuthnResult.ConstraintNotSatisfied,
+                WebAuthnHResult.SCardNoReadersAvailable => WebAuthnResult.ConstraintNotSatisfied,
                 WebAuthnHResult.NteDeviceNotFound => WebAuthnResult.NotAllowed,
                 WebAuthnHResult.NteNotFound => WebAuthnResult.NotAllowed,
                 _ => (WebAuthnResult)hresult

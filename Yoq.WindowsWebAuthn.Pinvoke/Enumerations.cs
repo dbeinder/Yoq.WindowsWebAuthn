@@ -21,7 +21,8 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         NteInvalidParameter = 0x80090027,       // The parameter is incorrect
         NteNotSupported = 0x80090029,           // The requested operation is not supported
         NteDeviceNotFound = 0x80090035,         // The device that is required by this cryptographic provider is not found on this platform
-        NteUserCanceled = 0x80090036            // The action was cancelled by the user
+        NteUserCanceled = 0x80090036,           // The action was cancelled by the user,
+        SCardNoReadersAvailable = 0x8010002E    // No NFC reader available?
     }
 
     public enum HashAlgorithm
