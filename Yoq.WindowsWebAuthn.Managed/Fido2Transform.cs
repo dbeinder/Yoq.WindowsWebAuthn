@@ -85,17 +85,14 @@ namespace Yoq.WindowsWebAuthn.Managed
             return null;
         }
 
-        // Ensure the JsonSerializer doesn't try to escape '+' characters
-        private static readonly JsonSerializerOptions _jso = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-
         public static ClientData ToClientData(this F2.CredentialCreateOptions opt, string origin, HashAlgorithm hashAlg = HashAlgorithm.Sha256) => new()
         {
             ClientDataJSON = JsonSerializer.SerializeToUtf8Bytes(new
             {
                 type = "webauthn.create",
-                challenge = Convert.ToBase64String(opt.Challenge),
+                challenge = F2.Base64Url.Encode(opt.Challenge),
                 origin = origin
-            }, _jso),
+            }),
             HashAlgorithm = hashAlg
         };
 
@@ -104,9 +101,9 @@ namespace Yoq.WindowsWebAuthn.Managed
             ClientDataJSON = JsonSerializer.SerializeToUtf8Bytes(new
             {
                 type = "webauthn.get",
-                challenge = Convert.ToBase64String(opt.Challenge),
+                challenge = F2.Base64Url.Encode(opt.Challenge),
                 origin = origin
-            }, _jso),
+            }),
             HashAlgorithm = hashAlg
         };
 
