@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Fido2NetLib;
+using Fido2NetLib.Cbor;
 using Fido2NetLib.Objects;
 using Yoq.WindowsWebAuthn.Managed;
 
@@ -43,6 +44,17 @@ namespace Yoq.WindowsWebAuthn.Demo
             }
 
             public string ToLine() => $"{Name};{ResidentKey};{Counter};{Convert.ToBase64String(CredentialId)};{Convert.ToBase64String(PublicKey)}";
+        }
+
+        static string DecodeAlgType(byte[]? pk)
+        {
+            try
+            {
+                var cpk = (CborMap)CborObject.Decode(pk);
+                var alg = (COSE.Algorithm)(int)cpk.GetValue((long)COSE.KeyCommonParameter.Alg);
+                return alg.ToString();
+            }
+            catch { return ""; }
         }
 
         static void Main(string[] args)
@@ -164,7 +176,7 @@ namespace Yoq.WindowsWebAuthn.Demo
                             UserVerification = uvReq
                         };
 
-                        var user = new Fido2User { Name = username, Id = RandomNumberGenerator.GetBytes(32), DisplayName = $"DisplayName({username})" };
+                        var user = new Fido2User { Name = username, Id = RandomNumberGenerator.GetBytes(16), DisplayName = $"DisplayName({username})" };
                         var excludeCreds = CredSelect("exclude");
                         var makeRequest = fido2.RequestNewCredential(user, excludeCreds, authSelection, attestationReq);
 
@@ -175,7 +187,7 @@ namespace Yoq.WindowsWebAuthn.Demo
                         if (res != WebAuthnResult.Success) continue;
 
                         var makeRes = fido2.MakeNewCredentialAsync(response, makeRequest, async (p, _) => !testCreds.Any(c => c.CredentialId.SequenceEqual(p.CredentialId))).Result;
-                        Console.WriteLine($"MakeNewCredential Result: {makeRes.Status} {makeRes.ErrorMessage} Counter: {makeRes.Result?.Counter}");
+                        Console.WriteLine($"MakeNewCredential Result: {makeRes.Status} {makeRes.ErrorMessage}  Algorithm: {DecodeAlgType(makeRes.Result?.PublicKey)}  Counter: {makeRes.Result?.Counter}");
                         if (makeRes.Result == null) continue;
                         testCreds.Add(new Credential(makeRes.Result, needResidentKey));
                         UpdateCredFile();
