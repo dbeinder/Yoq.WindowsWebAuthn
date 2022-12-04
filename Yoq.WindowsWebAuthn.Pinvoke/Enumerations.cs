@@ -11,6 +11,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     public enum WebAuthnHResult : uint
     {
         Ok = 0,
+        InvalidData = 0x8007000D,               //Win32: The data is invalid. (Invalid salt length at hmac-secret extension)
         NotSupported = 0x80070032,              //Win32: The request is not supported
         Canceled = 0x800704C7,                  //Win32: The operation was canceled by the user
         Timeout = 0x800705B4,                   //Win32: This operation returned because the timeout period expired
@@ -125,6 +126,11 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         LackOfSpace = 7,
         PlatformError = 8,
         AuthenticationError = 9
+    }
+
+    public enum GetAssertionFlags : int
+    {
+        HmacSecretValues = 0x00100000
     }
 
     public enum AttestationFormatType

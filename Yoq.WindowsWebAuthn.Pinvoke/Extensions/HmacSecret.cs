@@ -1,4 +1,4 @@
-﻿
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke.Extensions
@@ -26,6 +26,27 @@ namespace Yoq.WindowsWebAuthn.Pinvoke.Extensions
                 success = Marshal.PtrToStructure<HmacSecretBoolData>(r.ExtensionData).Bool;
             return new HmacSecretResultExtension { Success = success };
         });
+    }
+
+
+    public class PrfSalt
+    {
+        public byte[] First, Second;
+    }
+
+    public class HmacSecretAssertionExtension : WebAuthnAssertionExtensionInput
+    {
+        public bool UseRawSalts = false;
+        public PrfSalt GlobalSalt;
+        public Dictionary<byte[], PrfSalt> SaltsByCredential;
+        public override ExtensionType Type => ExtensionType.HmacSecret;
+        internal override RawWebAuthnExtensionData GetExtensionData() => new HmacSecretBoolData { Bool = true };
+    }
+
+    public class HmacSecretAssertionResultExtension : WebAuthnAssertionExtensionOutput
+    {
+        public override ExtensionType Type => ExtensionType.HmacSecret;
+        public byte[] First, Second;
     }
 
     //// MakeCredential Input Type:   BOOL.

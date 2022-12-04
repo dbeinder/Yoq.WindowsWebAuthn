@@ -14,7 +14,8 @@ namespace Yoq.WindowsWebAuthn.Managed
         ConstraintNotSatisfied,
         NotSupported,
         TokenStorageFull,
-        NotAllowed
+        NotAllowed,
+        InvalidParameters
         // enum contains original HRESULT if an unknown error is returned
     }
 
@@ -56,6 +57,7 @@ namespace Yoq.WindowsWebAuthn.Managed
                 WebAuthnHResult.SCardNoReadersAvailable => WebAuthnResult.ConstraintNotSatisfied,
                 WebAuthnHResult.NteDeviceNotFound => WebAuthnResult.NotAllowed,
                 WebAuthnHResult.NteNotFound => WebAuthnResult.NotAllowed,
+                WebAuthnHResult.InvalidData => WebAuthnResult.InvalidParameters,
                 _ => (WebAuthnResult)hresult
             };
             return result != WebAuthnResult.Success;

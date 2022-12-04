@@ -43,7 +43,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         // @@ WEBAUTHN_ASSERTION_VERSION_3 (API v4)
 
-        // IntPtr HmacSecret;
+        IntPtr HmacSecret;
 
 
         public Assertion MarshalToPublic()
@@ -73,6 +73,20 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
                 largeBlob = new byte[0];
             }
 
+            HmacSecret hmacSecret = null;
+            if (StructVersion >= 3)
+            {
+                if (HmacSecret != IntPtr.Zero)
+                {
+                    var rawSecret = Marshal.PtrToStructure<RawHmacSecretSalt>(HmacSecret);
+                    hmacSecret = new HmacSecret() { First = new byte[rawSecret.FirstSize], Second = new byte[rawSecret.SecondSize] };
+                    if (rawSecret.FirstSize > 0 && rawSecret.First != IntPtr.Zero)
+                        Marshal.Copy(rawSecret.First, hmacSecret.First, 0, rawSecret.FirstSize);
+                    if (rawSecret.SecondSize > 0 && rawSecret.Second != IntPtr.Zero)
+                        Marshal.Copy(rawSecret.Second, hmacSecret.Second, 0, rawSecret.SecondSize);
+                }
+            }
+
             return new Assertion
             {
                 AuthenticatorData = authData,
@@ -81,9 +95,15 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
                 Credential = cred,
                 Extensions = ext,
                 LargeBlobStatus = CredLargeBlobStatus,
-                LargeBlob = largeBlob
+                LargeBlob = largeBlob,
+                HmacSecret = hmacSecret
             };
         }
+    }
+
+    public class HmacSecret
+    {
+        public byte[] First, Second;
     }
 
     public class Assertion
@@ -107,5 +127,6 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         public LargeBlobStatus LargeBlobStatus;
         public byte[] LargeBlob;
+        public HmacSecret HmacSecret;
     }
 }

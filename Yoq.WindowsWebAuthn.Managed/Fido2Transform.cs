@@ -76,12 +76,27 @@ namespace Yoq.WindowsWebAuthn.Managed
         {
             // https://github.com/passwordless-lib/fido2-net-lib/issues/190
             // return new[] { new CredProtectExtensionIn() };
+            // return new[] { new HmacSecretCreationExtension() };
             return null;
         }
 
-        public static List<WebAuthnAssertionExtensionInput>? BuildAssertionExtensions(this F2.AssertionOptions opt)
+        public static IReadOnlyCollection<WebAuthnAssertionExtensionInput>? BuildAssertionExtensions(this F2.AssertionOptions opt)
         {
             // https://github.com/passwordless-lib/fido2-net-lib/issues/190
+            //return new[] {
+            //    new HmacSecretAssertionExtension() {
+            //        //UseRawSalts = true,
+            //        GlobalSalt = new PrfSalt() {
+            //            First = new byte[] { 12 },
+            //            Second = new byte[] { 13 }
+            //        },
+            //        //SaltsByCredential = opt.AllowCredentials
+            //        //    .ToDictionary(c => c.Id, c => new PrfSalt() {
+            //        //        First = new byte[] { 12 },
+            //        //        Second = new byte[] { 13 }
+            //        //    })
+            //    }
+            //};
             return null;
         }
 

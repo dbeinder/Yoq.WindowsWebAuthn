@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Yoq.WindowsWebAuthn.Pinvoke.Extensions;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke
 {
@@ -9,7 +10,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     internal class RawAuthenticatorGetAssertionOptions
     {
         // Version of this structure, to allow for modifications in the future.
-        protected int StructVersion = 5;
+        protected int StructVersion = 6;
 
         // Time that the operation is expected to complete within.
         // This is used as guidance, and can be overridden by the platform.
@@ -27,8 +28,8 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // User Verification Requirement.
         public UserVerificationRequirement UserVerificationRequirement;
 
-        // Reserved for future Use
-        protected int ReservedFlags = 0;
+        // Flags
+        public int Flags = 0;
 
         // The following fields have been added in WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_2
 
@@ -56,15 +57,18 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // @@ WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_6 (API v4)
 
         // PRF values which will be converted into HMAC-SECRET values according to WebAuthn Spec.
-        //internal IntPtr HmacSecretSaltValues;
+        internal IntPtr HmacSecretSaltValues;
 
         // Optional. BrowserInPrivate Mode. Defaulting to FALSE.
-        //internal bool BrowserInPrivateMode;
+        internal bool BrowserInPrivateMode;
 
         // ------------ ignored ------------
         private readonly RawCredentialExList _allowedCredentialsExList;
         private readonly RawWebAuthnExtensionOut[] _rawExtensions;
         private readonly RawWebAuthnExtensionData[] _rawExtensionData;
+        private readonly RawHmacSecretSaltOut[] _rawHmacSalts;
+        private readonly RawCredWithHmacSecretSalt[] _rawHmacCredSalts;
+        private readonly RawHmacSecretSaltValues _rawHmacSecretSaltValues;
 
         public RawAuthenticatorGetAssertionOptions() { }
         public RawAuthenticatorGetAssertionOptions(AuthenticatorGetAssertionOptions getOptions)
@@ -92,10 +96,43 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             AuthenticatorAttachment = getOptions.AuthenticatorAttachment;
             UserVerificationRequirement = getOptions.UserVerificationRequirement;
 
-            var ex = getOptions.Extensions?.Select(e => new { e.Type, Data = e.GetExtensionData() }).ToList();
+            var hmac = getOptions.Extensions?.FirstOrDefault(e => e.Type == ExtensionType.HmacSecret);
+            var ex = getOptions.Extensions?.Where(e => e.Type != ExtensionType.HmacSecret).Select(e => new { e.Type, Data = e.GetExtensionData() }).ToList();
             _rawExtensionData = ex?.Select(e => e.Data).ToArray();
             _rawExtensions = ex?.Select(e => new RawWebAuthnExtensionOut(e.Type, e.Data)).ToArray();
             Extensions = new RawWebAuthnExtensionsOut(_rawExtensions);
+
+            if (hmac is HmacSecretAssertionExtension prfReq)
+            {
+                var hasGlobalSalt = prfReq.GlobalSalt != null;
+                var hasSaltsByCredential = prfReq.SaltsByCredential != null;
+                if (!(hasGlobalSalt ^ hasSaltsByCredential))
+                    throw new ArgumentException("can only use EITHER GlobalSalt or SaltsByCredential");
+
+                if (prfReq.UseRawSalts) Flags |= (int)GetAssertionFlags.HmacSecretValues;
+
+                RawHmacSecretSaltOut globalSalt = null;
+                if (hasGlobalSalt)
+                {
+                    globalSalt = new RawHmacSecretSaltOut(prfReq.GlobalSalt.First, prfReq.GlobalSalt.Second);
+                    _rawHmacSalts = new[] { globalSalt };
+                }
+                else
+                {
+                    _rawHmacSalts = new RawHmacSecretSaltOut[prfReq.SaltsByCredential.Count];
+                    _rawHmacCredSalts = new RawCredWithHmacSecretSalt[prfReq.SaltsByCredential.Count];
+                    var n = 0;
+                    foreach (var kv in prfReq.SaltsByCredential)
+                    {
+                        _rawHmacSalts[n] = new RawHmacSecretSaltOut(kv.Value.First, kv.Value.Second);
+                        _rawHmacCredSalts[n] = new RawCredWithHmacSecretSalt(kv.Key, _rawHmacSalts[n]);
+                        n++;
+                    }
+                }
+                _rawHmacSecretSaltValues = new RawHmacSecretSaltValues(globalSalt, _rawHmacCredSalts);
+                HmacSecretSaltValues = Marshal.AllocHGlobal(Marshal.SizeOf<RawHmacSecretSaltValues>());
+                Marshal.StructureToPtr(_rawHmacSecretSaltValues, HmacSecretSaltValues, false);
+            }
 
             CredLargeBlobOperation = getOptions.LargeBlobOperation;
             if (getOptions.LargeBlob != null)
@@ -114,7 +151,11 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             _allowedCredentialsExList?.Dispose();
             if (_rawExtensions != null) foreach (var ext in _rawExtensions) ext.Dispose();
             if (_rawExtensionData != null) foreach (var ext in _rawExtensionData) ext.Dispose();
+            if (_rawHmacSalts != null) foreach (var salt in _rawHmacSalts) salt.Dispose();
+            if (_rawHmacCredSalts != null) foreach (var cs in _rawHmacSalts) cs.Dispose();
+            _rawHmacSecretSaltValues?.Dispose();
 
+            Helper.SafeFreeHGlobal(ref HmacSecretSaltValues);
             Helper.SafeFreeHGlobal(ref AllowCredentialsExListPtr);
             Helper.SafeFreeHGlobal(ref CancellationId);
             Helper.SafeFreeHGlobal(ref CredLargeBlob);

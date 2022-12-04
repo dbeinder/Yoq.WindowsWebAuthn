@@ -9,7 +9,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     internal class RawAuthenticatorMakeCredentialOptions
     {
         // Version of this structure, to allow for modifications in the future.
-        protected int StructVersion = 4;
+        protected int StructVersion = 5;
 
         // Time that the operation is expected to complete within.
         // This is used as guidance, and can be overridden by the platform.
@@ -61,7 +61,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // @@ WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_5 (API v4)
 
         // Optional. BrowserInPrivate Mode. Defaulting to FALSE.
-        //public bool BrowserInPrivateMode;
+        public bool BrowserInPrivateMode;
 
         // ------------ ignored ------------
         private readonly RawCredentialExList _excludeCredentialsExList;

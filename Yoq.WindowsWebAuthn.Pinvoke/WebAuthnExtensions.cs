@@ -26,7 +26,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     {
         public RawWebAuthnExtensionOut(ExtensionType type, RawWebAuthnExtensionData data)
         {
-            ExtensionIdentifier = type.ToString();
+            ExtensionIdentifier = EnumHelper.GetString(type);
             ExtensionDataBytes = Marshal.SizeOf(data);
             if (ExtensionDataBytes == 0) return;
             ExtensionData = Marshal.AllocHGlobal(ExtensionDataBytes);
@@ -36,7 +36,6 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         protected void FreeMemory()
         {
-            if (ExtensionDataBytes == 0) return;
             Helper.SafeFreeHGlobal(ref ExtensionData);
         }
 
