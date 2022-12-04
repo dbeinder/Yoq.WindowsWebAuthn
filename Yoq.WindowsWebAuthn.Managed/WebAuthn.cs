@@ -85,7 +85,7 @@ namespace Yoq.WindowsWebAuthn.Managed
                                                                     out var credential);
             cancelReg?.Dispose();
             if (CheckFailure(res, ct, out var result)) return result;
-
+            
             response = new F2.AuthenticatorAttestationRawResponse
             {
                 Id = credential.CredentialId,
@@ -94,6 +94,10 @@ namespace Yoq.WindowsWebAuthn.Managed
                 {
                     AttestationObject = credential.AttestationObject,
                     ClientDataJson = clientData.ClientDataJSON
+                },
+                Extensions = new F2.Objects.AuthenticationExtensionsClientOutputs()
+                {
+                    CredProps = new F2.Objects.CredentialPropertiesOutput() { Rk = credential.ResidentKey }
                 },
                 Type = F2.Objects.PublicKeyCredentialType.PublicKey
             };
