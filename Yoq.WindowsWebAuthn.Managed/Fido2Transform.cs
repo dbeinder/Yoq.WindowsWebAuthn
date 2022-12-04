@@ -53,7 +53,7 @@ namespace Yoq.WindowsWebAuthn.Managed
             _ => throw new NotImplementedException(transport.ToString())
         };
 
-        public static CredentialType FromF2(this F2.Objects.PublicKeyCredentialType? pkct) => pkct switch
+        public static CredentialType FromF2(this F2.Objects.PublicKeyCredentialType pkct) => pkct switch
         {
             F2.Objects.PublicKeyCredentialType.PublicKey => CredentialType.PublicKey,
             _ => throw new NotImplementedException(pkct.ToString())
@@ -127,7 +127,8 @@ namespace Yoq.WindowsWebAuthn.Managed
             TimeoutMilliseconds = (int)opt.Timeout,
             UserVerificationRequirement = opt.AuthenticatorSelection.UserVerification.FromF2(),
             AuthenticatorAttachment = opt.AuthenticatorSelection.AuthenticatorAttachment.FromF2(),
-            RequireResidentKey = opt.AuthenticatorSelection.RequireResidentKey,
+            RequireResidentKey = opt.AuthenticatorSelection.ResidentKey == F2.Objects.ResidentKeyRequirement.Required,
+            PreferResidentKey = opt.AuthenticatorSelection.ResidentKey == F2.Objects.ResidentKeyRequirement.Preferred,
             AttestationConveyancePreference = opt.Attestation.FromF2(),
             ExcludeCredentialsEx = opt.ExcludeCredentials.Select(ec => ec.FromF2()).ToList(),
             CancellationId = cancellationId,

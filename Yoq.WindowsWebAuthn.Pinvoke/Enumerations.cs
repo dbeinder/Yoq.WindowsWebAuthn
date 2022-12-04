@@ -65,6 +65,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         Test = 0x00000008,
         Internal = 0x00000010,
+        Hybrid = 0x00000020,
 
         Mask = 0x0000001F
     }
