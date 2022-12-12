@@ -40,6 +40,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
     public enum CoseAlgorithm : int
     {
+        EDDSA = -8,
         ECDSA_P256_WITH_SHA256 = -7,
         ECDSA_P384_WITH_SHA384 = -35,
         ECDSA_P521_WITH_SHA512 = -36,
