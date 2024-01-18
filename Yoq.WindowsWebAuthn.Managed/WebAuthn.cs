@@ -1,4 +1,5 @@
 ﻿using Yoq.WindowsWebAuthn.Pinvoke;
+using Yoq.WindowsWebAuthn.Pinvoke.Extensions;
 using F2 = Fido2NetLib;
 
 namespace Yoq.WindowsWebAuthn.Managed
@@ -90,14 +91,15 @@ namespace Yoq.WindowsWebAuthn.Managed
             {
                 Id = credential.CredentialId,
                 RawId = credential.CredentialId,
-                Response = new F2.AuthenticatorAttestationRawResponse.ResponseData
+                Response = new F2.AuthenticatorAttestationRawResponse.AttestationResponse
                 {
                     AttestationObject = credential.AttestationObject,
                     ClientDataJson = clientData.ClientDataJSON
                 },
-                Extensions = new F2.Objects.AuthenticationExtensionsClientOutputs()
+                ClientExtensionResults = new F2.Objects.AuthenticationExtensionsClientOutputs()
                 {
-                    CredProps = new F2.Objects.CredentialPropertiesOutput() { Rk = credential.ResidentKey }
+                    CredProps = new F2.Objects.CredentialPropertiesOutput() { Rk = credential.ResidentKey },
+                    CredProtect = credential.Extensions.GetOrNull<CredProtectExtensionOut>()?.UserVerification.ToF2()
                 },
                 Type = F2.Objects.PublicKeyCredentialType.PublicKey
             };
@@ -142,7 +144,7 @@ namespace Yoq.WindowsWebAuthn.Managed
             return WebAuthnResult.Success;
         }
 
-        public static WebAuthnResult GetPlatformCredentials(out List<CredentialDetails> platformCredentials, string rpId = null, bool isPrivateWindow = false)
+        public static WebAuthnResult GetPlatformCredentials(out List<CredentialDetails> platformCredentials, string? rpId = null, bool isPrivateWindow = false)
         {
             var res = WebAuthnApi.GetPlatformCredentialList(out platformCredentials, rpId, isPrivateWindow);
             CheckFailure(res, null, out var result);
