@@ -24,11 +24,11 @@ namespace Yoq.WindowsWebAuthn.Demo
             public byte[] CredentialId;
             public byte[] PublicKey;
 
-            public Credential(AttestationVerificationSuccess s, bool isRk)
+            public Credential(RegisteredPublicKeyCredential s, bool isRk)
             {
                 Name = s.User.Name;
                 ResidentKey = isRk;
-                Counter = s.Counter;
+                Counter = s.SignCount;
                 CredentialId = s.Id;
                 PublicKey = s.PublicKey;
             }
@@ -88,6 +88,7 @@ namespace Yoq.WindowsWebAuthn.Demo
             var attachment = AuthenticatorAttachment.CrossPlatform;
             var uvReq = UserVerificationRequirement.Discouraged;
             var attestationReq = AttestationConveyancePreference.None;
+            var credProtect = CredentialProtectionPolicy.UserVerificationOptional;
             var transportIdx = 0;
             var transportList = new AuthenticatorTransport[]?[] { null,
                 new[] { AuthenticatorTransport.Usb }, new[] { AuthenticatorTransport.Nfc },
@@ -105,12 +106,13 @@ namespace Yoq.WindowsWebAuthn.Demo
                 Console.WriteLine($"  (4) Toggle allowed transport [{(transport?[0].ToString() ?? "Any")}]       ");
                 Console.WriteLine($"  (5) Toggle automatic 10sec timeout [{(doTimeout ? "ON" : "OFF")}] ");
                 Console.WriteLine($"(1) Create new credential");
-                Console.WriteLine($"  (6) Toggle ResidentKey requirement [{residentKeyReq}]     ");
-                Console.WriteLine($"  (7) Toggle Attestation requirement [{attestationReq}]     ");
-                Console.WriteLine($"  (8) Toggle Authenticator Attachment [{attachment}]        ");
+                Console.WriteLine($"  (6) Toggle Attestation requirement [{attestationReq}]     ");
+                Console.WriteLine($"  (7) Toggle Authenticator Attachment [{attachment}]        ");
+                Console.WriteLine($"  (8) Toggle ResidentKey requirement [{residentKeyReq}]     ");
+                Console.WriteLine($"  (9) Toggle CredProtect policy [{credProtect.ToString().Replace("UserVerification", "Uv")}]                            ");
                 Console.WriteLine($"(2) Request Assertion");
-                Console.WriteLine($"(9) Forget all credentials [{testCreds.Count} stored]   ");
-                Console.WriteLine($"(10) Manage platform credentials");
+                Console.WriteLine($"(10) Forget all credentials [{testCreds.Count} stored]   ");
+                Console.WriteLine($"(11) Manage platform credentials");
                 Console.WriteLine($"(0) Exit");
                 Console.Write(">            ");
 
@@ -124,7 +126,7 @@ namespace Yoq.WindowsWebAuthn.Demo
                     var res = new List<PublicKeyCredentialDescriptor>();
                     if (testCreds.Count == 0) return res;
                     for (var n = 0; n < testCreds.Count; n++)
-                        Console.WriteLine($" [{n}] {testCreds[n].Name}");
+                        Console.WriteLine($" [{n}] {testCreds[n].Name}{(testCreds[n].ResidentKey?" [RK]":"")}");
                     Console.Write($"Comma separated list of credentials to {what} [none]> ");
                     var selection = Console.ReadLine()?.Trim().Split(",")
                         .Select(s => int.TryParse(s.Trim(), out var n) ? n : -1)
@@ -142,18 +144,19 @@ namespace Yoq.WindowsWebAuthn.Demo
                 switch (selection)
                 {
                     case 0: return;
-                    case 5: doTimeout = !doTimeout; JumpBack(); continue;
-                    case 8: attachment = (AuthenticatorAttachment)(((int)attachment + 1) % 2); JumpBack(); continue;
-                    case 7: attestationReq = (AttestationConveyancePreference)(((int)attestationReq + 1) % 3); JumpBack(); continue;
-                    case 4: transport = transportList[++transportIdx % 5]; JumpBack(); continue;
                     case 3: uvReq = (UserVerificationRequirement)(((int)uvReq + 1) % 3); JumpBack(); continue;
-                    case 6: residentKeyReq = (ResidentKeyRequirement)(((int)residentKeyReq + 1) % 3); JumpBack(); continue;
-                    case 9: File.WriteAllText(CredentialsFile, ""); testCreds.Clear(); JumpBack(); continue;
-                    case 10:
+                    case 4: transport = transportList[++transportIdx % 5]; JumpBack(); continue;
+                    case 5: doTimeout = !doTimeout; JumpBack(); continue;
+                    case 6: attestationReq = (AttestationConveyancePreference)(((int)attestationReq + 1) % 3); JumpBack(); continue;
+                    case 7: attachment = (AuthenticatorAttachment)(((int)attachment + 1) % 2); JumpBack(); continue;
+                    case 8: residentKeyReq = (ResidentKeyRequirement)(((int)residentKeyReq + 1) % 3); JumpBack(); continue;
+                    case 9: credProtect = (CredentialProtectionPolicy)(((int)credProtect) % 3 + 1); JumpBack(); continue;
+                    case 10: File.WriteAllText(CredentialsFile, ""); testCreds.Clear(); JumpBack(); continue;
+                    case 11:
                         Console.WriteLine("\n= Platform credentials =");
 
                         var res = WebAuthn.GetPlatformCredentials(out var platformCredentials);
-                        Console.WriteLine($"GetPlatformCredentials: {res}, found {platformCredentials?.Count} credentials");
+                        Console.WriteLine($"GetPlatformCredentials: {res}, found {platformCredentials?.Count ?? 0} credentials");
                         if (res != WebAuthnResult.Success) break;
                         for (var n = 0; n < platformCredentials!.Count; n++)
                             Console.WriteLine($"  [{n}] {platformCredentials[n].User.Name}");
@@ -178,7 +181,8 @@ namespace Yoq.WindowsWebAuthn.Demo
 
                         var user = new Fido2User { Name = username, Id = RandomNumberGenerator.GetBytes(16), DisplayName = $"DisplayName({username})" };
                         var excludeCreds = CredSelect("exclude");
-                        var makeRequest = fido2.RequestNewCredential(user, excludeCreds, authSelection, attestationReq);
+                        var extensions = new AuthenticationExtensionsClientInputs { CredentialProtectionPolicy = credProtect };
+                        var makeRequest = fido2.RequestNewCredential(user, excludeCreds, authSelection, attestationReq, extensions);
 
                         var cancelSource = doTimeout ? new CancellationTokenSource(TimeSpan.FromSeconds(10)) : null;
                         Console.WriteLine($"Calling Windows WebAuthn API...");
@@ -187,25 +191,32 @@ namespace Yoq.WindowsWebAuthn.Demo
                         if (res != WebAuthnResult.Success) continue;
 
                         var makeRes = fido2.MakeNewCredentialAsync(response, makeRequest, async (p, _) => !testCreds.Any(c => c.CredentialId.SequenceEqual(p.CredentialId))).Result;
-                        Console.WriteLine($"MakeNewCredential Result: {makeRes.Status} {makeRes.ErrorMessage}  Algorithm: {DecodeAlgType(makeRes.Result?.PublicKey)}  Counter: {makeRes.Result?.Counter}");
+                        var isResident = response.ClientExtensionResults.CredProps?.Rk;
+                        var isResidentStr = isResident switch { null => "unknown", true => "yes", false => "no" };
+                        var hasCredProtect = response.ClientExtensionResults.CredProtect switch { null => "unknown", CredentialProtectionPolicy p => p.ToString() };
+                        Console.WriteLine($"MakeNewCredential result: {makeRes.Status} {makeRes.ErrorMessage}\n" +
+                            $"  Algorithm: {DecodeAlgType(makeRes.Result?.PublicKey)}\n" +
+                            $"  Counter: {makeRes.Result?.SignCount}\n" +
+                            $"  IsResidentKey: {isResidentStr}\n" +
+                            $"  CredProtect: {hasCredProtect}");
                         if (makeRes.Result == null) continue;
-                        testCreds.Add(new Credential(makeRes.Result, response.Extensions.CredProps?.Rk ?? false));
+                        testCreds.Add(new Credential(makeRes.Result, isResident ?? false));
                         UpdateCredFile();
 
                         var attestation = AuthenticatorAttestationResponse.Parse(response).AttestationObject;
                         var verifier = AttestationVerifier.Create(attestation.Fmt);
                         var clientDataHash = SHA256.HashData(response.Response.ClientDataJson);
-                        (var attType, var trustPath) = verifier.Verify(attestation.AttStmt, attestation.AuthData, clientDataHash);
-                        Console.WriteLine($"Attestation Type: {attType}");
+                        (var attType, var trustPath) = verifier.VerifyAsync(attestation.AttStmt, attestation.AuthData, clientDataHash).Result;
+                        Console.WriteLine($"  Attestation Type: {attType}");
                         if (trustPath != null)
                         {
                             for (var cn = 0; cn < trustPath.Length; cn++)
                             {
                                 var cert = trustPath[cn];
-                                Console.WriteLine($"Attestation[{cn}] Subject: {cert?.Subject}");
-                                Console.WriteLine($"               Issuer:  {cert?.Issuer}");
-                                Console.WriteLine($"               Serial:  {cert?.SerialNumber}");
-                                Console.WriteLine($"               Valid:   {cert?.NotBefore:yyyy-MM-dd} - {cert?.NotAfter:yyyy-MM-dd}");
+                                Console.WriteLine($"  Attestation[{cn}] Subject: {cert?.Subject}");
+                                Console.WriteLine($"                 Issuer:  {cert?.Issuer}");
+                                Console.WriteLine($"                 Serial:  {cert?.SerialNumber}");
+                                Console.WriteLine($"                 Valid:   {cert?.NotBefore:yyyy-MM-dd} - {cert?.NotAfter:yyyy-MM-dd}");
                             }
                         }
                         continue;
@@ -228,10 +239,10 @@ namespace Yoq.WindowsWebAuthn.Demo
                             continue;
                         }
 
-                        var getResult = fido2.MakeAssertionAsync(assertResponse, assertRequest, cred.PublicKey, null, cred.Counter, (p, _) => Task.FromResult(true)).Result;
-                        Console.WriteLine($"MakeAssertion Result: {getResult.Status} {getResult.ErrorMessage} Counter: {getResult.Counter}");
+                        var getResult = fido2.MakeAssertionAsync(assertResponse, assertRequest, cred.PublicKey, Array.Empty<byte[]>(), cred.Counter, (p, _) => Task.FromResult(true)).Result;
+                        Console.WriteLine($"MakeAssertion Result: {getResult.Status} {getResult.ErrorMessage} Counter: {getResult.SignCount}");
                         Console.WriteLine($"Used Credential: {cred.Name}");
-                        cred.Counter = getResult.Counter;
+                        cred.Counter = getResult.SignCount;
                         UpdateCredFile();
                         continue;
                     default: continue;

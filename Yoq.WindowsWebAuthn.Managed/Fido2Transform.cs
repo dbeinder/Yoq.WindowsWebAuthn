@@ -58,6 +58,22 @@ namespace Yoq.WindowsWebAuthn.Managed
             F2.Objects.PublicKeyCredentialType.PublicKey => CredentialType.PublicKey,
             _ => throw new NotImplementedException(pkct.ToString())
         };
+
+        public static UserVerification FromF2(this F2.Objects.CredentialProtectionPolicy? policy) => policy switch
+        {
+            F2.Objects.CredentialProtectionPolicy.UserVerificationOptional => UserVerification.Optional,
+            F2.Objects.CredentialProtectionPolicy.UserVerificationOptionalWithCredentialIdList => UserVerification.OptionalWithCredentialIdList,
+            F2.Objects.CredentialProtectionPolicy.UserVerificationRequired => UserVerification.Required,
+            _ => throw new NotImplementedException(policy.ToString())
+        };
+
+        public static F2.Objects.CredentialProtectionPolicy ToF2(this UserVerification policy) => policy switch
+        {
+            UserVerification.Optional => F2.Objects.CredentialProtectionPolicy.UserVerificationOptional,
+            UserVerification.OptionalWithCredentialIdList => F2.Objects.CredentialProtectionPolicy.UserVerificationOptionalWithCredentialIdList,
+            UserVerification.Required => F2.Objects.CredentialProtectionPolicy.UserVerificationRequired,
+            _ => throw new NotImplementedException(policy.ToString())
+        };
         #endregion
 
         public static RelayingPartyInfo ToRelayingPartyInfo(this F2.CredentialCreateOptions opts)
@@ -75,9 +91,16 @@ namespace Yoq.WindowsWebAuthn.Managed
         public static IReadOnlyCollection<WebAuthnCreationExtensionInput>? BuildCreationExtensions(this F2.CredentialCreateOptions opt)
         {
             // https://github.com/passwordless-lib/fido2-net-lib/issues/190
-            // return new[] { new CredProtectExtensionIn() };
-            // return new[] { new HmacSecretCreationExtension() };
-            return null;
+            if (opt.Extensions == null) return null;
+            var extensionInputs = new List<WebAuthnCreationExtensionInput>();
+            if (opt.Extensions.CredentialProtectionPolicy != null)
+            {
+                var protPolicy = opt.Extensions.CredentialProtectionPolicy.FromF2();
+                var failIfUnsupported = opt.Extensions.EnforceCredentialProtectionPolicy ?? true;
+                extensionInputs.Add(new CredProtectExtensionIn(protPolicy, failIfUnsupported));
+            }
+            // TODO: PRF
+            return extensionInputs;
         }
 
         public static IReadOnlyCollection<WebAuthnAssertionExtensionInput>? BuildAssertionExtensions(this F2.AssertionOptions opt)

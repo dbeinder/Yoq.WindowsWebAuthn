@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Yoq.WindowsWebAuthn.Pinvoke;
 
 namespace Yoq.WindowsWebAuthn.Pinvoke
 {
@@ -127,5 +128,13 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         public bool EnterpriseAttestation;
         public bool LargeBlobSupported;
         public bool ResidentKey;
+    }
+}
+
+public static class ExtensionListExtensions
+{
+    public static T GetOrNull<T>(this List<WebAuthnExtensionOutput> list) where T : WebAuthnExtensionOutput
+    {
+        return list.FirstOrDefault(e => e as T != null) as T;
     }
 }
