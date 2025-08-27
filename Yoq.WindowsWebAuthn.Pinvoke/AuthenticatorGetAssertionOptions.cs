@@ -10,7 +10,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     internal class RawAuthenticatorGetAssertionOptions
     {
         // Version of this structure, to allow for modifications in the future.
-        protected int StructVersion = 6;
+        protected int StructVersion = 8;
 
         // Time that the operation is expected to complete within.
         // This is used as guidance, and can be overridden by the platform.
@@ -61,6 +61,20 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
 
         // Optional. BrowserInPrivate Mode. Defaulting to FALSE.
         internal bool BrowserInPrivateMode;
+
+        // @@ WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_7 (API v7)
+
+        internal IntPtr pLinkedDevice = (IntPtr)0;
+        internal bool bAutoFill = false;
+        internal UInt32 JsonExtSize = 0;
+        internal IntPtr pbJsonExt = (IntPtr)0;
+
+
+        // @@ WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_8 (API v8)
+
+        internal UInt32 CredentialHintsCnt = 0;
+        internal IntPtr CredentialHints = (IntPtr)0;
+
 
         // ------------ ignored ------------
         private readonly RawCredentialExList _allowedCredentialsExList;
@@ -141,6 +155,8 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
                 CredLargeBlob = Marshal.AllocHGlobal(CredLargeBlobBytes);
                 Marshal.Copy(getOptions.LargeBlob, 0, CredLargeBlob, CredLargeBlobBytes);
             }
+            //CredentialHintsCnt = 1;
+            //CredentialHints = StaticStrSecurityKey;
         }
 
         ~RawAuthenticatorGetAssertionOptions() => FreeMemory();
@@ -168,12 +184,19 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         }
 
         static readonly IntPtr StaticBoolTrue, StaticBoolFalse;
+        //static readonly IntPtr StaticStrSecurityKey, StaticStrClientDevice, StaticStrHybrid;
         static RawAuthenticatorGetAssertionOptions()
         {
             StaticBoolTrue = Marshal.AllocHGlobal(Marshal.SizeOf<bool>());
             Marshal.StructureToPtr(true, StaticBoolTrue, false);
             StaticBoolFalse = Marshal.AllocHGlobal(Marshal.SizeOf<bool>());
             Marshal.StructureToPtr(false, StaticBoolTrue, false);
+            //StaticBoolFalse = Marshal.AllocHGlobal(Marshal.SizeOf<bool>());
+            //IntPtr rStaticStrSecurityKey = Marshal.StringToHGlobalUni("security-key");
+            //IntPtr rStaticStrClientDevice = Marshal.StringToHGlobalUni("client-device");
+            //IntPtr rStaticStrHybrid = Marshal.StringToHGlobalUni("hybrid");
+            //StaticStrSecurityKey = Marshal.AllocHGlobal(Marshal.SizeOf<IntPtr>());
+            //Marshal.WriteIntPtr(StaticStrSecurityKey, rStaticStrSecurityKey);
         }
     }
 

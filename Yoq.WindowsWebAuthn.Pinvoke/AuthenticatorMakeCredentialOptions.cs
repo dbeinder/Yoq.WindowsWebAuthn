@@ -9,7 +9,7 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
     internal class RawAuthenticatorMakeCredentialOptions
     {
         // Version of this structure, to allow for modifications in the future.
-        protected int StructVersion = 5;
+        protected int StructVersion = 8;
 
         // Time that the operation is expected to complete within.
         // This is used as guidance, and can be overridden by the platform.
@@ -63,6 +63,24 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         // Optional. BrowserInPrivate Mode. Defaulting to FALSE.
         public bool BrowserInPrivateMode;
 
+        // @@ WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_6 (API v6)
+
+        public bool EnablePrf;
+
+        // @@ WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_7 (API v7)
+
+        internal IntPtr pLinkedDevice = (IntPtr)0;
+        internal UInt32 JsonExtSize = 0;
+        internal IntPtr pbJsonExt = (IntPtr)0;
+
+        // @@ WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_8 (API v8)
+
+        internal IntPtr pPRFGlobalEval = (IntPtr)0;
+        internal UInt32 CredentialHintsCnt = 0;
+        internal IntPtr CredentialHints = (IntPtr)0;
+
+        public bool ThirdPartyPayment;
+
         // ------------ ignored ------------
         private readonly RawCredentialExList _excludeCredentialsExList;
         private readonly RawWebAuthnExtensionOut[] _rawExtensions;
@@ -101,6 +119,12 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
             EnterpriseAttestation = makeOptions.EnterpriseAttestation;
             LargeBlobSupport = makeOptions.LargeBlobSupport;
             PreferResidentKey = makeOptions.PreferResidentKey;
+
+            if (AuthenticatorAttachment == AuthenticatorAttachment.CrossPlatform)
+            {
+                CredentialHintsCnt = 1;
+                CredentialHints = StaticStrSecurityKey;
+            }
         }
 
         ~RawAuthenticatorMakeCredentialOptions() => FreeMemory();
@@ -120,6 +144,14 @@ namespace Yoq.WindowsWebAuthn.Pinvoke
         {
             FreeMemory();
             GC.SuppressFinalize(this);
+        }
+
+        static readonly IntPtr StaticStrSecurityKey;
+        static RawAuthenticatorMakeCredentialOptions()
+        {
+            IntPtr rStaticStrSecurityKey = Marshal.StringToHGlobalUni("security-key");
+            StaticStrSecurityKey = Marshal.AllocHGlobal(Marshal.SizeOf<IntPtr>());
+            Marshal.WriteIntPtr(StaticStrSecurityKey, rStaticStrSecurityKey);
         }
     }
 
